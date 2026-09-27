@@ -1,0 +1,13 @@
+/* L'impression du portfolio reste lisible ; cv.html est la version dédiée. */
+body { background: white; color: black; font-size: 10pt; }
+.site-header, .hero-art, .hero-actions, .project-filters, .contact-form, .back-to-top, .theme-toggle, .interest-photo { display: none !important; }
+.container { width: 100%; }
+.section { padding-block: 1.5rem; }
+.section-tinted, .project-card, .project-featured { background: none; }
+.hero, .about-grid, .experience-grid, .education-grid, .skills-grid, .contact-grid, .interests-layout { display: block; }
+.hero h1 { font-size: 40pt; }
+h2 { font-size: 22pt; }
+.reveal, .reveal.reveal-pending { opacity: 1 !important; transform: none !important; }
+.project-card, .education-item, .award-panel { break-inside: avoid; }
+a { color: inherit; }
+@page { margin: 15mm; }
