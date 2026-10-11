@@ -18,7 +18,7 @@ npm run validate   # validation HTML des pages générées (après un build)
 npm run cv:pdf     # build, puis génère le CV en PDF (public/CV-Abdallah-Borji.pdf)
 ```
 
-Le dossier `dist/` est un site statique : il se publie tel quel sur Netlify, Vercel, GitHub Pages ou n’importe quel hébergement de fichiers. Avant de publier, renseigner l’adresse du site dans `astro.config.mjs` (`site`), pour les URL canoniques et l’aperçu des liens partagés.
+Le site est publié sur GitHub Pages, à l’adresse https://abdallah94212.github.io/ : chaque push sur `main` le reconstruit et le met en ligne (`.github/workflows/deploy.yml`, environ deux minutes). Pour changer d’adresse, modifier `site` dans `astro.config.mjs` (URL canoniques, aperçu des liens partagés, lien du portfolio dans le CV), puis régénérer le PDF du CV.
 
 ## Ce que contient le site
 
