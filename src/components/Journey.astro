@@ -6,7 +6,7 @@ import { journey } from "../data/profile";
   <div class="journey__pin" data-journey-pin>
     <header class="journey__head wrap">
       <h2 class="section-title" id="journey-title" data-reveal="title">Parcours</h2>
-      <p class="journey__intro" data-reveal="fade">D’un cabinet comptable à un cabinet de conseil data, avec le terrain entre les deux.</p>
+      <p class="journey__intro" data-reveal="fade">De 2020 à aujourd’hui, en sept étapes.</p>
     </header>
 
     <div class="journey__viewport">
@@ -19,7 +19,7 @@ import { journey } from "../data/profile";
               <p class="journey__kind label">{item.kind}</p>
               <h3 class="journey__title">{item.title}</h3>
               <p class="journey__place">{item.place}</p>
-              <p class="journey__text">{item.text}</p>
+              {item.text && <p class="journey__text">{item.text}</p>}
               {item.points && (
                 <ul class="journey__points">
                   {item.points.map((point) => (

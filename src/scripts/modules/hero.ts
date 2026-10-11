@@ -7,14 +7,16 @@ export function initHero() {
   const hero = document.querySelector<HTMLElement>("[data-hero]");
   if (!hero) return;
   const chars = Array.from(hero.querySelectorAll<HTMLElement>(".hero__char:not(.hero__dot)"));
-  initNameFocus(hero, chars);
+  // Les lettres du reflet (prénom) suivent la même graisse que les vraies.
+  const shine = Array.from(hero.querySelectorAll<HTMLElement>(".hero__shine-char"));
+  initNameFocus(hero, chars, shine);
   initScrollOut(hero);
 }
 
 /* La graisse de chaque lettre dépend de sa distance au pointeur : le nom
    « fait la mise au point » là où se trouve la souris. La boucle ne tourne
    que pendant le mouvement, puis s'arrête une fois les lettres revenues. */
-function initNameFocus(hero: HTMLElement, chars: HTMLElement[]) {
+function initNameFocus(hero: HTMLElement, chars: HTMLElement[], shine: HTMLElement[]) {
   if (!hasFinePointer() || prefersReducedMotion() || !chars.length) return;
 
   const BASE = 780;
@@ -47,6 +49,7 @@ function initNameFocus(hero: HTMLElement, chars: HTMLElement[]) {
       if (Math.abs(next - target) > 0.5) settled = false;
       weights[index] = next;
       char.style.fontWeight = next.toFixed(1);
+      if (shine[index]) shine[index].style.fontWeight = char.style.fontWeight;
     });
     if (settled && !pointer) stop();
   };
@@ -59,7 +62,7 @@ function initNameFocus(hero: HTMLElement, chars: HTMLElement[]) {
   const stop = () => {
     running = false;
     gsap.ticker.remove(tick);
-    chars.forEach((char) => char.style.removeProperty("font-weight"));
+    [...chars, ...shine].forEach((char) => char.style.removeProperty("font-weight"));
   };
 
   const area = hero.querySelector<HTMLElement>("[data-hero-name]")?.parentElement ?? hero;

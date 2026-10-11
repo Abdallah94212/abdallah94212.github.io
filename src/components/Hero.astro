@@ -31,6 +31,7 @@ const lastChars = [...profile.lastName];
         <span class="visually-hidden">{profile.name}</span>
         <span class="hero__line hero__line--first" aria-hidden="true">
           {firstChars.map((char, index) => <span class="hero__char" style={`--i: ${index}`}>{char}</span>)}
+          <span class="hero__shine">{firstChars.map((char) => <span class="hero__shine-char">{char}</span>)}</span>
         </span>
         <span class="hero__line hero__line--last" aria-hidden="true">
           {lastChars.map((char, index) => <span class="hero__char" style={`--i: ${firstChars.length + index}`}>{char}</span>)}<span class="hero__char hero__dot">.</span>
@@ -162,7 +163,15 @@ const lastChars = [...profile.lastName];
   }
 
   .hero__line--first {
+    position: relative;
     margin-left: -0.05em;
+  }
+
+  /* Reflet du prénom : une copie exacte des lettres, transparente, que
+     traverse un dégradé bleu (background-clip: text). Les vraies lettres ne
+     changent jamais : au repos, le prénom reste parfaitement net. */
+  .hero__shine {
+    display: none;
   }
 
   .hero__line--last {
@@ -365,6 +374,34 @@ const lastChars = [...profile.lastName];
       --speed: 1;
     }
 
+    .hero__shine {
+      --shine-edge: color-mix(in srgb, var(--accent) 50%, transparent);
+      --shine-core: color-mix(in srgb, color-mix(in srgb, var(--accent) 62%, #fff) 85%, transparent);
+      position: absolute;
+      inset: 0;
+      display: block;
+      color: transparent;
+      /* Comme les vraies lettres, posées une par une : pas de crénage. */
+      font-kerning: none;
+      background: linear-gradient(
+          105deg,
+          transparent 47.6%,
+          var(--shine-edge) 49.1%,
+          var(--shine-core) 50%,
+          var(--shine-edge) 50.9%,
+          transparent 52.4%
+        )
+        72% 0 / 400% 100% no-repeat;
+      -webkit-background-clip: text;
+      background-clip: text;
+      pointer-events: none;
+      animation: name-shine 7s calc(2.4s * var(--speed)) infinite;
+    }
+
+    .hero__shine-char {
+      display: inline-block;
+    }
+
     :global(html.intro-seen) .hero {
       --speed: 0.45;
     }
@@ -413,6 +450,18 @@ const lastChars = [...profile.lastName];
   @keyframes char-rise {
     from {
       transform: translateY(118%);
+    }
+  }
+
+  /* Un passage d'environ 2,2 s, puis le repos : un cycle toutes les 7 s. */
+  @keyframes name-shine {
+    0% {
+      background-position: 72% 0;
+      animation-timing-function: cubic-bezier(0.37, 0, 0.63, 1);
+    }
+    32%,
+    100% {
+      background-position: 28% 0;
     }
   }
 

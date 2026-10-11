@@ -4,12 +4,12 @@
 
 export const cvHeadline = {
   status: "Étudiant en Pré-MSc à Epitech",
-  fields: "Développement logiciel · Data · Business",
+  fields: "Développement logiciel · Data · Web",
   availability: "Recherche une alternance de janvier à août 2027",
 } as const;
 
 export const cvSummary =
-  "Un parcours qui relie le business et la technique : deux années en Business & Technology, puis le Pré-MSc d’Epitech, et six mois de développement logiciel orienté data chez I2M Advisory. J’aborde un projet dans son ensemble : le besoin, l’usage, la réalisation technique et les objectifs métier.";
+  "Je développe en Python et en JavaScript : applications data, tableaux de bord, modèles prédictifs, sites web. Six mois chez I2M Advisory sur un outil d’analyse de données destiné à des clients bancaires, de la compréhension du besoin jusqu’aux tests.";
 
 export interface CvEntry {
   title: string;
@@ -56,10 +56,10 @@ export const cvEducation: CvEntry[] = [
     context: "Informatique, développement logiciel et conception de projets techniques, en préparation du MSc.",
   },
   {
-    title: "Business & Technology",
+    title: "Business & Technology Manager",
     place: "Epitech Digital School, Paris",
     when: "2024 – 2026",
-    context: "Technologie, développement, data, marketing, stratégie et gestion de projet.",
+    context: "MSc (titre RNCP niveau 7), 1re et 2e années : management, digitalisation, marketing.",
   },
   { title: "Formation générale BAFA", place: "Aroéven Paris, Chennevières-sur-Marne", when: "2024" },
   { title: "Baccalauréat général", place: "Lycée Samuel Champlain, Chennevières-sur-Marne", when: "2023" },
@@ -71,7 +71,7 @@ export const cvProjects = [
     slug: "f1",
     subtitle: "Prédictions en Formule 1",
     stack: "Python · scikit-learn · Streamlit",
-    text: "Dashboard et simulateur de Grand Prix (saisons 2018 à 2023) : résultats croisés avec la météo, deux modèles RandomForest qui estiment les probabilités de victoire et de podium.",
+    text: "Dashboard et simulateur de Grand Prix (2018 à 2023) : résultats croisés avec la météo, deux modèles RandomForest qui estiment victoire et podium. Exploration sous Jupyter Notebook et JupyterLab.",
   },
   {
     slug: "scoolize",
@@ -98,8 +98,8 @@ export const cvOtherProjects = "Application mobile React Native, boutique React 
 export const cvSkills = [
   { title: "Développement", items: "Python, JavaScript, Java, HTML / CSS, Streamlit, React (notions)" },
   { title: "Data", items: "SQL, SQL Server, pandas, analyse et visualisation de données, bases en statistiques" },
-  { title: "Outils", items: "Git / GitHub, Docker, Figma, Framer" },
-  { title: "Business", items: "Marketing digital, analyse de marché et concurrentielle, SWOT, besoins et parcours utilisateurs, proposition de valeur, gestion de projet" },
+  { title: "Outils", items: "Git / GitHub, Docker, Jupyter Notebook, JupyterLab, Figma, Framer" },
+  { title: "Méthodes", items: "Gestion de projet, besoins utilisateurs, analyse concurrentielle, marketing digital" },
 ] as const;
 
 export const cvAward: CvEntry = {

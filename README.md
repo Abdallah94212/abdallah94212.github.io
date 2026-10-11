@@ -1,6 +1,6 @@
 # Portfolio d’Abdallah Borji
 
-Portfolio et CV en ligne d’Abdallah Borji, étudiant en Pré-MSc à Epitech : développement logiciel, data et business.
+Portfolio et CV en ligne d’Abdallah Borji, étudiant en Pré-MSc à Epitech : développement logiciel, data et web.
 
 Le site est construit avec **Astro** : chaque page est générée en HTML statique au moment du build, puis enrichie par un peu de JavaScript pour le mouvement. Sans JavaScript, tout le contenu reste lisible, et l’entrée en scène de l’accueil (en CSS) se joue quand même.
 

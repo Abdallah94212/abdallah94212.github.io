@@ -65,7 +65,7 @@ const shots = {
   f1Weather: {
     src: f1Weather,
     alt: "Simulateur F1 avec le panneau météo ouvert : température de l’air, de la piste et vitesse du vent réglables.",
-    caption: "Air, piste, vent : chaque réglage relance le calcul des probabilités.",
+    caption: "Air, piste, vent : chaque réglage relance le calcul.",
   },
   f1Summary: {
     src: f1Summary,
@@ -158,7 +158,7 @@ export const projects: Project[] = [
     kind: "Data · Machine learning",
     context: "Projet data",
     pitch: "Six saisons de Formule 1 croisées avec la météo, pour estimer avant le départ qui gagnera et qui finira sur le podium.",
-    stack: ["Python", "pandas", "scikit-learn", "Streamlit", "Plotly", "Jupyter"],
+    stack: ["Python", "pandas", "scikit-learn", "Streamlit", "Plotly", "Jupyter Notebook", "JupyterLab"],
     repo: repo("F1"),
     tone: { bg: "#1a0f12", ink: "#f7eeef", muted: "#c9aeb2" },
     layout: "media-right",
@@ -169,7 +169,7 @@ export const projects: Project[] = [
         type: "text",
         title: "La question",
         paragraphs: [
-          "Les résultats de Formule 1 sont publics, mais dispersés dans une dizaine de tables : circuits, courses, pilotes, résultats. La question du projet était simple à poser : en les recoupant avec la météo de chaque Grand Prix, peut-on estimer les chances d’un pilote avant même le départ ?",
+          "Les résultats de Formule 1 sont publics, mais éparpillés dans une dizaine de tables : circuits, courses, pilotes, classements. En les croisant avec la météo de chaque Grand Prix, peut-on estimer les chances d’un pilote avant le départ ?",
         ],
       },
       { type: "media", shots: [shots.f1Weather] },
@@ -177,11 +177,11 @@ export const projects: Project[] = [
         type: "text",
         title: "Deux interfaces",
         paragraphs: [
-          "Un dashboard pour lire le passé, un simulateur pour jouer avec l’avenir.",
+          "Un dashboard pour explorer six saisons, un simulateur pour tester des scénarios de course.",
         ],
         points: [
-          "Le dashboard historique résume 2018 à 2023 : podiums par équipe, répartition des victoires, classements des pilotes. Tout se filtre par période, pays, équipe et météo.",
-          "Le simulateur part d’une course réelle. On change la température de l’air ou de la piste, le vent, la grille de départ : deux modèles recalculent en direct les probabilités de victoire et de podium de chaque pilote.",
+          "Le dashboard résume 2018 à 2023 : podiums par équipe, répartition des victoires, classement des pilotes. Tout se filtre par période, pays, équipe et météo.",
+          "Le simulateur part d’une course réelle. On change la température de l’air ou de la piste, le vent, la grille de départ : deux modèles recalculent aussitôt les chances de victoire et de podium de chaque pilote.",
         ],
       },
       { type: "media", shots: [shots.f1Summary, shots.f1Drivers] },
@@ -189,12 +189,12 @@ export const projects: Project[] = [
         type: "text",
         title: "Sous le capot",
         paragraphs: [
-          "Le jeu de données final est construit en cinq étapes, du fichier brut au fichier enrichi par la météo, et chaque étape est conservée pour pouvoir revenir en arrière.",
+          "Le jeu de données final se construit en cinq étapes, du fichier brut au fichier enrichi par la météo. Chaque étape est conservée, pour pouvoir revenir en arrière.",
         ],
         points: [
-          "Pas de fuite d’information : chaque variable décrit la situation avant la course (points au championnat, taux de podium et d’abandon des courses précédentes, position moyenne, place sur la grille).",
+          "Aucune fuite d’information : chaque variable décrit la situation avant la course (points au championnat, taux de podium et d’abandon sur les courses précédentes, position moyenne, place sur la grille).",
           "Deux classifieurs RandomForest de scikit-learn, entraînés séparément pour la victoire et pour le podium.",
-          "Exploration et feature engineering documentés dans deux notebooks Jupyter.",
+          "Exploration et feature engineering dans deux notebooks, avec Jupyter Notebook et JupyterLab.",
         ],
       },
     ],
@@ -204,7 +204,7 @@ export const projects: Project[] = [
     title: "Scoolize",
     kind: "Produit · UX · Full-stack",
     context: "Projet en équipe de trois",
-    pitch: "Rendre lisibles les critères d’admission post-bac : un outil pour que les formations publient leurs attentes, un autre pour que les candidats sachent s’ils y correspondent.",
+    pitch: "Rendre lisibles les critères d’admission post-bac : un outil pour que les formations publient leurs attentes, un autre pour que les candidats voient s’ils y correspondent.",
     stack: ["Recherche UX", "HTML / CSS / JS", "Node.js", "Express", "PostgreSQL", "Prisma", "Docker"],
     repo: repo("scoolise-"),
     tone: { bg: "#0b2623", ink: "#ecf7f5", muted: "#9cc5bf" },
@@ -216,8 +216,8 @@ export const projects: Project[] = [
         type: "text",
         title: "Le constat",
         paragraphs: [
-          "Projet pédagogique mené en équipe de trois, en réponse à un appel d’offres du ministère de l’Éducation. L’audit de Parcoursup qui ouvre le projet arrive à un constat : les critères d’examen des vœux existent, mais ils restent difficiles à lire pour les candidats et à formaliser pour les formations.",
-          "Scoolize ne remplace pas Parcoursup. Il rend lisible ce qui ne l’est pas encore, avec deux produits qui partagent un même référentiel de compétences.",
+          "Projet pédagogique en équipe de trois, en réponse à un appel d’offres du ministère de l’Éducation. Point de départ : un audit de Parcoursup. Les critères d’examen des vœux existent, mais les candidats ont du mal à les lire, et les formations à les formaliser.",
+          "Scoolize ne remplace pas Parcoursup : il rend ces critères lisibles, avec deux produits qui partagent le même référentiel de compétences.",
         ],
       },
       { type: "media", shots: [shots.scoolizeHome, shots.scoolizeMobile] },
@@ -236,7 +236,7 @@ export const projects: Project[] = [
         type: "text",
         title: "Du prototype au vrai produit",
         paragraphs: [
-          "Le jury a relevé l’absence de back-end lors de la première soutenance. L’équipe a donc construit l’application complète derrière les maquettes.",
+          "À la première soutenance, le jury a pointé l’absence de back-end. L’équipe a donc construit l’application complète derrière les maquettes.",
         ],
         points: [
           "API REST Node.js et Express, documentée avec Swagger.",
@@ -254,7 +254,7 @@ export const projects: Project[] = [
     title: "I2M Advisory",
     kind: "Web · Next.js",
     context: "Site vitrine, non publié",
-    pitch: "Le site d’un cabinet de conseil data pour la finance : sobre, rapide, et simple à faire évoluer quand le cabinet grandit.",
+    pitch: "Le site d’un cabinet de conseil data pour la finance : sobre, rapide et facile à enrichir.",
     stack: ["Next.js", "TypeScript", "Tailwind CSS", "shadcn/ui", "Framer Motion", "Zod"],
     repo: repo("i2m-advisory"),
     tone: { bg: "#0d1426", ink: "#eef1f8", muted: "#a5afc6" },
@@ -266,7 +266,7 @@ export const projects: Project[] = [
         type: "text",
         title: "Le besoin",
         paragraphs: [
-          "Un cabinet de conseil s’adresse à des directions data de banques, de sociétés de gestion et d’assurances. Son site doit inspirer confiance en quelques secondes, puis rester facile à enrichir : nouvelles expertises, articles, offres d’emploi.",
+          "Le cabinet s’adresse aux directions data des banques, des sociétés de gestion et des assurances. Son site doit inspirer confiance en quelques secondes, puis s’enrichir sans effort : nouvelles expertises, articles, offres d’emploi.",
         ],
       },
       { type: "media", shots: [shots.i2mExpertise] },
@@ -275,7 +275,7 @@ export const projects: Project[] = [
         title: "Ce que fait le site",
         paragraphs: [],
         points: [
-          "Des pages d’expertise générées à partir de données, et non écrites à la main une par une.",
+          "Des pages d’expertise générées à partir de données, pas écrites une à une.",
           "Des articles rédigés en MDX, des pages carrières et cabinet, des mentions légales.",
           "Un formulaire de contact validé avec React Hook Form et Zod, relié à une route API.",
           "Un sitemap et un robots.txt générés automatiquement.",
@@ -309,16 +309,16 @@ export const projects: Project[] = [
         type: "text",
         title: "D’abord, nettoyer",
         paragraphs: [
-          "Le point de départ est un fichier brut de statistiques de joueurs. Avant la moindre analyse, un script de nettoyage garde le poste principal de chaque joueur, supprime les doublons, écarte les âges aberrants et les colonnes vides, puis traduit les postes.",
+          "Point de départ : un fichier brut de statistiques de joueurs. Avant toute analyse, un script de nettoyage garde le poste principal de chaque joueur, supprime les doublons, écarte les âges aberrants et les colonnes vides, puis traduit les postes.",
         ],
       },
       { type: "media", shots: [shots.soccerPositions] },
       {
         type: "text",
-        title: "Huit façons de lire le jeu",
+        title: "Huit vues",
         paragraphs: [
-          "Le dashboard Streamlit propose huit vues : la répartition par poste, les nations les plus représentées, les meilleurs buteurs, les minutes par poste, les joueurs et nations les plus efficaces (buts rapportés au temps de jeu), la comparaison entre ligues, et une fiche individuelle.",
-          "La fiche joueur est la plus utile : elle situe chaque joueur par rapport à la moyenne de son poste, plutôt que de livrer des chiffres sans repère.",
+          "Le dashboard Streamlit propose huit vues : répartition par poste, nations les plus représentées, meilleurs buteurs, minutes par poste, joueurs et nations les plus efficaces (buts rapportés au temps de jeu), comparaison des ligues et fiche individuelle.",
+          "La fiche joueur est la plus utile : elle situe chaque joueur par rapport à la moyenne de son poste, au lieu d’aligner des chiffres sans repère.",
         ],
       },
       { type: "media", shots: [shots.soccerPlayer, shots.soccerLeagues] },
