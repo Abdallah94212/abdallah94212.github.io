@@ -1,0 +1,270 @@
+---
+import { journey } from "../data/profile";
+---
+
+<section class="journey" id="parcours" aria-labelledby="journey-title" data-journey>
+  <div class="journey__pin" data-journey-pin>
+    <header class="journey__head wrap">
+      <h2 class="section-title" id="journey-title" data-reveal="title">Parcours</h2>
+      <p class="journey__intro" data-reveal="fade">D’un cabinet comptable à un cabinet de conseil data, avec le terrain entre les deux.</p>
+    </header>
+
+    <div class="journey__viewport">
+      <ol class="journey__track" data-journey-track>
+        {
+          journey.map((item) => (
+            <li class:list={["journey__item", { "journey__item--featured": item.featured }]} data-journey-item>
+              <span class="journey__dot" aria-hidden="true" />
+              <p class="journey__when">{item.when}</p>
+              <p class="journey__kind label">{item.kind}</p>
+              <h3 class="journey__title">{item.title}</h3>
+              <p class="journey__place">{item.place}</p>
+              <p class="journey__text">{item.text}</p>
+              {item.points && (
+                <ul class="journey__points">
+                  {item.points.map((point) => (
+                    <li>{point}</li>
+                  ))}
+                </ul>
+              )}
+              {item.tags && (
+                <ul class="chips journey__tags" aria-label="Technologies">
+                  {item.tags.map((tag) => (
+                    <li>{tag}</li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))
+        }
+      </ol>
+      <div class="journey__axis" aria-hidden="true"><span data-journey-progress></span></div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .journey {
+    padding-block: calc(var(--section) * 0.5) var(--section);
+  }
+
+  .journey__head {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: clamp(1rem, 2vw, 2rem);
+    align-items: end;
+    padding-bottom: clamp(3rem, 6vw, 5rem);
+  }
+
+  .journey__head .section-title {
+    grid-column: 1 / 8;
+  }
+
+  .journey__intro {
+    grid-column: 8 / -1;
+    max-width: 30ch;
+    font-size: var(--fs-lead);
+    line-height: 1.3;
+    letter-spacing: -0.015em;
+    padding-bottom: 0.6rem;
+  }
+
+  /* ---------- Lecture verticale (par défaut, sans JS, mobile) ---------- */
+
+  .journey__viewport {
+    position: relative;
+    max-width: var(--max);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  .journey__track {
+    display: grid;
+    gap: 3.5rem;
+    padding-left: 2.25rem;
+    border-left: 1px solid var(--line-strong);
+    margin-left: 0.4rem;
+  }
+
+  .journey__item {
+    position: relative;
+    display: grid;
+    gap: 0.4rem;
+    max-width: 44rem;
+  }
+
+  .journey__dot {
+    position: absolute;
+    top: 0.85rem;
+    left: calc(-2.25rem - 0.4rem);
+    width: 0.8rem;
+    height: 0.8rem;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 1px solid var(--ink);
+    transition:
+      background-color var(--dur) var(--ease-out),
+      transform var(--dur) var(--ease-out);
+  }
+
+  .journey__item--featured .journey__dot {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .journey__when {
+    font-size: clamp(2rem, 1.4rem + 2vw, 3.5rem);
+    font-weight: 740;
+    font-stretch: 118%;
+    line-height: 1;
+    letter-spacing: -0.045em;
+  }
+
+  .journey__kind {
+    margin-top: 0.75rem;
+  }
+
+  .journey__title {
+    font-size: clamp(1.3rem, 1.05rem + 0.8vw, 1.8rem);
+    font-weight: 680;
+    font-stretch: 106%;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+  }
+
+  .journey__place {
+    font-weight: 500;
+  }
+
+  .journey__text {
+    margin-top: 0.5rem;
+    color: var(--muted);
+    font-size: var(--fs-small);
+    max-width: 46ch;
+  }
+
+  .journey__points {
+    display: grid;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    font-size: var(--fs-small);
+  }
+
+  .journey__points li {
+    position: relative;
+    padding-left: 1.1rem;
+  }
+
+  .journey__points li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.65em;
+    width: 0.45rem;
+    height: 1px;
+    background: currentColor;
+  }
+
+  .journey__tags {
+    margin-top: 0.9rem;
+  }
+
+  .journey__axis {
+    display: none;
+  }
+
+  /* ---------- Lecture horizontale (grands écrans, ajoutée par journey.ts) ---------- */
+
+  .journey.is-horizontal {
+    padding-bottom: 0;
+  }
+
+  .journey.is-horizontal .journey__pin {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 100svh;
+    padding-block: calc(var(--header-h) + 1rem) 2rem;
+    overflow: hidden;
+  }
+
+  .journey.is-horizontal .journey__viewport {
+    max-width: none;
+    padding: 0;
+  }
+
+  .journey.is-horizontal .journey__track {
+    display: flex;
+    align-items: flex-start;
+    gap: clamp(2.5rem, 5vw, 6rem);
+    width: max-content;
+    margin: 0;
+    padding: 2.75rem max(var(--gutter), calc((100vw - var(--max)) / 2 + var(--gutter))) 0;
+    border: 0;
+    will-change: transform;
+  }
+
+  /* Une étape pas encore atteinte passe en gris secondaire (contraste AA
+     conservé), puis à l'encre quand la frise l'atteint. */
+  .journey.is-horizontal .journey__item {
+    width: clamp(17rem, 22vw, 23rem);
+  }
+
+  .journey.is-horizontal .journey__item:not(.is-reached) :is(.journey__when, .journey__title, .journey__place) {
+    color: var(--muted);
+  }
+
+  .journey__when,
+  .journey__title,
+  .journey__place {
+    transition: color 0.6s var(--ease-out);
+  }
+
+  .journey.is-horizontal .journey__item--featured {
+    width: clamp(26rem, 36vw, 38rem);
+  }
+
+  .journey.is-horizontal .journey__dot {
+    top: -2.75rem;
+    left: 0;
+    transform: translateY(-50%);
+  }
+
+  .journey.is-horizontal .journey__item.is-reached .journey__dot {
+    background: var(--ink);
+    transform: translateY(-50%) scale(1.25);
+  }
+
+  .journey.is-horizontal .journey__item--featured.is-reached .journey__dot {
+    background: var(--accent);
+  }
+
+  .journey.is-horizontal .journey__axis {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--line-strong);
+  }
+
+  .journey.is-horizontal .journey__axis span {
+    position: absolute;
+    inset: 0;
+    background: var(--ink);
+    transform-origin: left;
+    transform: scaleX(0);
+  }
+
+  @media (max-width: 900px) {
+    .journey__head .section-title,
+    .journey__intro {
+      grid-column: 1 / -1;
+    }
+
+    .journey__intro {
+      margin-top: 1.25rem;
+    }
+  }
+</style>

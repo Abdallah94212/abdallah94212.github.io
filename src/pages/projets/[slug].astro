@@ -1,0 +1,460 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Icon from "../../components/Icon.astro";
+import Shot from "../../components/Shot.astro";
+import MotionScript from "../../components/MotionScript.astro";
+import { profile } from "../../data/profile";
+import { projects, type Project, type Shot as ShotData } from "../../data/projects";
+import { projectUrl, url } from "../../lib/url";
+
+export function getStaticPaths() {
+  return projects.map((project, index) => ({
+    params: { slug: project.slug },
+    props: { project, next: projects[(index + 1) % projects.length] },
+  }));
+}
+
+interface Props {
+  project: Project;
+  next: Project;
+}
+
+const { project, next } = Astro.props;
+const tone = (p: Project) => `--bg: ${p.tone.bg}; --ink: ${p.tone.ink}; --muted: ${p.tone.muted};`;
+const mediaLayout = (shots: ShotData[]) => {
+  if (shots.length === 1) return "single";
+  return shots.some((shot) => shot.mobile) ? "with-phone" : "pair";
+};
+---
+
+<BaseLayout
+  page="case"
+  title={`${project.title} · ${profile.name}`}
+  description={project.pitch}
+  tone={{ bg: project.tone.bg, ink: project.tone.ink }}
+>
+  <div class="case-progress" aria-hidden="true"></div>
+  <article class="case">
+    <header class="case-hero" style={tone(project)}>
+      <div class="wrap case-hero__grid">
+        <a class="link case-hero__back" href={url("/#projets")}><Icon name="arrow-left" /> Tous les projets</a>
+        <p class="case-hero__meta label">{project.kind}</p>
+        <h1 class="case-hero__title"><span style={`view-transition-name: title-${project.slug}; view-transition-class: project-title`}>{project.title}</span></h1>
+        <p class="case-hero__pitch">{project.pitch}</p>
+
+        <dl class="case-facts">
+          <div>
+            <dt class="label">Contexte</dt>
+            <dd>{project.context}</dd>
+          </div>
+          <div>
+            <dt class="label">Technologies</dt>
+            <dd>{project.stack.join(", ")}</dd>
+          </div>
+          {
+            project.role && (
+              <div>
+                <dt class="label">Mon rôle</dt>
+                <dd>{project.role}</dd>
+              </div>
+            )
+          }
+          <div>
+            <dt class="label">Code</dt>
+            <dd>
+              <a class="link" href={project.repo} target="_blank" rel="noopener noreferrer">
+                Voir le dépôt GitHub <Icon name="arrow-up-right" />
+                <span class="visually-hidden"> (nouvel onglet)</span>
+              </a>
+            </dd>
+          </div>
+        </dl>
+      </div>
+      <div class="wrap case-hero__media">
+        <Shot shot={project.cover} sizes="(min-width: 1200px) 1200px, 94vw" loading="eager" transitionName={`media-${project.slug}`} />
+      </div>
+    </header>
+
+    <div class="case-body wrap">
+      {
+        project.blocks.map((block) =>
+          block.type === "text" ? (
+            <section class="case-text" data-reveal="fade">
+              <h2 class="case-text__title">{block.title}</h2>
+              <div class="case-text__body">
+                {block.paragraphs.map((paragraph) => (
+                  <p>{paragraph}</p>
+                ))}
+                {block.points && (
+                  <ul class="case-text__points">
+                    {block.points.map((point) => (
+                      <li>{point}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </section>
+          ) : (
+            <div class={`case-media case-media--${mediaLayout(block.shots)}`} data-reveal="media">
+              {block.shots.map((shot) => (
+                <Shot shot={shot} sizes={shot.mobile ? "(min-width: 900px) 24vw, 60vw" : "(min-width: 1200px) 1100px, 94vw"} caption />
+              ))}
+            </div>
+          ),
+        )
+      }
+
+      {
+        project.status && (
+          <aside class="case-note" data-reveal="fade">
+            <p class="label">À noter</p>
+            <p>{project.status}</p>
+          </aside>
+        )
+      }
+    </div>
+
+    <nav class="case-next" style={tone(next)} aria-label="Projet suivant">
+      <a class="case-next__link wrap" href={projectUrl(next.slug)} data-astro-prefetch>
+        <span class="label case-next__label">Projet suivant</span>
+        <span class="case-next__title" style={`view-transition-name: title-${next.slug}; view-transition-class: project-title`}>{next.title}</span>
+        <span class="case-next__pitch">{next.pitch}</span>
+        <div class="case-next__media" style={`view-transition-name: media-${next.slug}`}>
+          <Shot shot={next.cover} sizes="(min-width: 900px) 40vw, 90vw" />
+        </div>
+        <Icon name="arrow-right" class="case-next__icon" />
+      </a>
+    </nav>
+  </article>
+  <MotionScript />
+</BaseLayout>
+
+<style>
+  /* Progression de lecture, pilotée par le défilement en CSS pur : affichée
+     seulement par les navigateurs qui savent la faire avancer. */
+  .case-progress {
+    display: none;
+  }
+
+  @supports (animation-timeline: scroll()) {
+    .case-progress {
+      display: block;
+      position: fixed;
+      inset: 0 0 auto;
+      z-index: calc(var(--z-header) + 1);
+      height: 2px;
+      background: var(--accent);
+      transform-origin: left;
+      animation: case-progress linear both;
+      animation-timeline: scroll(root);
+    }
+
+    @keyframes case-progress {
+      from {
+        transform: scaleX(0);
+      }
+      to {
+        transform: scaleX(1);
+      }
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .case-progress {
+      display: none;
+    }
+  }
+
+  .case-hero {
+    --accent: #8ea0ff;
+    --accent-ink: #0b0c10;
+    --line: color-mix(in srgb, var(--ink) 18%, transparent);
+    --shadow: 0 50px 90px -40px rgb(0 0 0 / 80%);
+    color: var(--ink);
+    padding-top: calc(var(--header-h) + clamp(2rem, 6vh, 4rem));
+    /* La capture déborde sur la suite : le fond s'arrête à mi-hauteur. */
+    background: linear-gradient(var(--bg) 0 calc(100% - clamp(6rem, 18vw, 16rem)), transparent 0);
+  }
+
+  .case-hero__grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: clamp(1rem, 2vw, 2rem);
+    row-gap: 1.5rem;
+    align-items: end;
+  }
+
+  .case-hero__back {
+    grid-column: 1 / -1;
+    justify-self: start;
+    margin-bottom: clamp(1rem, 4vh, 2.5rem);
+  }
+
+  .case-hero__meta {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.25rem;
+    color: var(--muted);
+  }
+
+  .case-hero__title {
+    grid-column: 1 / 9;
+    font-size: clamp(3.25rem, 1.2rem + 7.4vw, 10rem);
+    font-weight: 780;
+    font-stretch: 118%;
+    line-height: 0.88;
+    letter-spacing: -0.055em;
+  }
+
+  .case-hero__title span {
+    display: inline-block;
+  }
+
+  .case-hero__pitch {
+    grid-column: 9 / -1;
+    font-size: var(--fs-lead);
+    line-height: 1.3;
+    letter-spacing: -0.015em;
+    padding-bottom: 0.4rem;
+  }
+
+  .case-facts {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;
+    gap: 1.5rem clamp(1rem, 2vw, 2rem);
+    margin-top: clamp(2rem, 5vh, 3.5rem);
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .case-facts dd {
+    margin-top: 0.4rem;
+    font-size: var(--fs-small);
+    font-weight: 500;
+  }
+
+  .case-facts .link {
+    min-height: 0;
+    background-position: 0 100%;
+  }
+
+  .case-hero__media {
+    margin-top: clamp(2.5rem, 6vh, 4rem);
+  }
+
+  /* ---------- Corps ---------- */
+
+  .case-body {
+    display: grid;
+    gap: clamp(4rem, 9vw, 8rem);
+    padding-block: clamp(4rem, 9vw, 8rem) var(--section);
+  }
+
+  .case-text {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: clamp(1rem, 2vw, 2rem);
+    align-items: start;
+  }
+
+  .case-text__title {
+    grid-column: 1 / 5;
+    font-size: var(--fs-h3);
+    font-weight: 720;
+    font-stretch: 112%;
+    line-height: 1;
+    letter-spacing: -0.035em;
+  }
+
+  .case-text__body {
+    grid-column: 5 / 12;
+    display: grid;
+    gap: 1.25rem;
+    font-size: clamp(1.1rem, 1rem + 0.45vw, 1.4rem);
+    line-height: 1.5;
+    letter-spacing: -0.01em;
+  }
+
+  .case-text__points {
+    display: grid;
+    gap: 1rem;
+    counter-reset: point;
+  }
+
+  .case-text__points li {
+    position: relative;
+    padding-left: 3rem;
+    color: var(--ink-soft);
+    counter-increment: point;
+  }
+
+  .case-text__points li::before {
+    content: counter(point, decimal-leading-zero);
+    position: absolute;
+    left: 0;
+    top: 0.35em;
+    font-family: var(--font-mono);
+    font-size: var(--fs-label);
+    color: var(--muted);
+  }
+
+  .case-media {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: clamp(1rem, 2vw, 2rem);
+    align-items: start;
+  }
+
+  .case-media--single > :global(*) {
+    grid-column: 1 / -1;
+  }
+
+  .case-media--pair > :global(:first-child) {
+    grid-column: 1 / 8;
+  }
+
+  .case-media--pair > :global(:last-child) {
+    grid-column: 8 / -1;
+    margin-top: clamp(3rem, 10vw, 9rem);
+  }
+
+  .case-media--with-phone > :global(:not(.shot--mobile)) {
+    grid-column: 1 / 10;
+  }
+
+  .case-media--with-phone > :global(.shot--mobile) {
+    grid-column: 10 / -1;
+    grid-row: 1;
+    margin-top: clamp(2rem, 8vw, 6rem);
+  }
+
+  .case-note {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: clamp(1rem, 2vw, 2rem);
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .case-note .label {
+    grid-column: 1 / 5;
+  }
+
+  .case-note p:last-child {
+    grid-column: 5 / 12;
+    color: var(--muted);
+  }
+
+  /* ---------- Projet suivant ---------- */
+
+  .case-next {
+    --line: color-mix(in srgb, var(--ink) 18%, transparent);
+    --shadow: 0 40px 80px -40px rgb(0 0 0 / 80%);
+    background: var(--bg);
+    color: var(--ink);
+    border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+    overflow: clip;
+  }
+
+  .case-next__link {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: clamp(1rem, 2vw, 2rem);
+    row-gap: 1.25rem;
+    align-items: end;
+    padding-block: clamp(4rem, 10vw, 8rem);
+    text-decoration: none;
+  }
+
+  .case-next__label {
+    grid-column: 1 / -1;
+    color: var(--muted);
+  }
+
+  .case-next__title {
+    grid-column: 1 / 8;
+    font-size: clamp(3rem, 1.2rem + 6.5vw, 9rem);
+    font-weight: 780;
+    font-stretch: 118%;
+    line-height: 0.88;
+    letter-spacing: -0.055em;
+  }
+
+  .case-next__pitch {
+    grid-column: 1 / 7;
+    max-width: 40ch;
+    color: color-mix(in srgb, var(--ink) 80%, transparent);
+  }
+
+  .case-next__media {
+    grid-column: 8 / -1;
+    grid-row: 2 / 4;
+    align-self: center;
+    transform: translateY(1.5rem) rotate(-2deg);
+    transition: transform 0.8s var(--ease-out);
+  }
+
+  .case-next__link :global(.case-next__icon) {
+    position: absolute;
+    right: var(--gutter);
+    top: clamp(4rem, 10vw, 8rem);
+    font-size: 2rem;
+    transition: transform var(--dur) var(--ease-out);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .case-next__link:hover .case-next__media {
+      transform: none;
+    }
+
+    .case-next__link:hover :global(.case-next__icon) {
+      transform: translateX(6px);
+    }
+  }
+
+  @media (max-width: 900px) {
+    .case-hero__title,
+    .case-hero__pitch,
+    .case-text__title,
+    .case-text__body,
+    .case-note .label,
+    .case-note p:last-child,
+    .case-next__title,
+    .case-next__pitch,
+    .case-next__media {
+      grid-column: 1 / -1;
+    }
+
+    .case-next__media {
+      grid-row: auto;
+      margin-top: 1.5rem;
+    }
+
+    .case-facts {
+      grid-template-columns: 1fr;
+    }
+
+    .case-text {
+      row-gap: 1.25rem;
+    }
+
+    .case-media--pair > :global(*),
+    .case-media--with-phone > :global(:not(.shot--mobile)) {
+      grid-column: 1 / -1;
+      margin-top: 0;
+    }
+
+    .case-media--pair > :global(:last-child) {
+      margin-top: 2rem;
+    }
+
+    .case-media--with-phone > :global(.shot--mobile) {
+      grid-column: 3 / 11;
+      grid-row: auto;
+      margin-top: 2rem;
+    }
+  }
+</style>

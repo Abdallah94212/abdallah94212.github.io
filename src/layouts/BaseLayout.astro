@@ -1,0 +1,83 @@
+---
+import "@fontsource-variable/mona-sans/wdth.css";
+import "@fontsource-variable/jetbrains-mono/wght.css";
+import "../styles/global.css";
+import monaLatin from "@fontsource-variable/mona-sans/files/mona-sans-latin-wdth-normal.woff2?url";
+import SiteHeader from "../components/SiteHeader.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import { profile } from "../data/profile";
+import { url } from "../lib/url";
+
+interface Props {
+  title?: string;
+  description?: string;
+  page: "home" | "case" | "cv" | "404";
+  /** Couleurs du haut de page (fiches projets) : l'en-tête s'y adapte. */
+  tone?: { bg: string; ink: string };
+  jsonLd?: Record<string, unknown>;
+}
+
+const { title = profile.seo.title, description = profile.seo.description, page, tone, jsonLd } = Astro.props;
+const canonical = Astro.site ? new URL(Astro.url.pathname, Astro.site).href : undefined;
+const ogImage = Astro.site ? new URL(url("/og.png"), Astro.site).href : undefined;
+const toneStyle = tone ? `--top-bg: ${tone.bg}; --top-ink: ${tone.ink};` : undefined;
+---
+
+<!doctype html>
+<html lang="fr" data-page={page} style={toneStyle}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {canonical && <link rel="canonical" href={canonical} />}
+    <meta name="author" content={profile.name} />
+    <meta name="theme-color" content="#f2f3f5" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0b0c10" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href={url("/favicon.svg")} type="image/svg+xml" />
+    <link rel="preload" href={monaLatin} as="font" type="font/woff2" crossorigin />
+    <slot name="head" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta property="og:site_name" content={profile.name} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    {canonical && <meta property="og:url" content={canonical} />}
+    {ogImage && <meta property="og:image" content={ogImage} />}
+    <meta name="twitter:card" content="summary_large_image" />
+
+    {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
+
+    <!-- Avant le premier rendu : thème choisi (pas de flash) et intro accélérée
+         si l'accueil a déjà été vu pendant la session. -->
+    <script is:inline>
+      (() => {
+        const root = document.documentElement;
+        let theme = null;
+        try {
+          theme = localStorage.getItem("theme");
+        } catch {}
+        root.dataset.theme =
+          theme === "light" || theme === "dark" ? theme : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        root.classList.add("js");
+        try {
+          if (sessionStorage.getItem("intro-seen")) root.classList.add("intro-seen");
+          if (root.dataset.page === "home") sessionStorage.setItem("intro-seen", "1");
+        } catch {}
+      })();
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <SiteHeader page={page} />
+    <main id="contenu" tabindex="-1">
+      <slot />
+    </main>
+    <SiteFooter />
+    <script>
+      import "../scripts/main";
+    </script>
+  </body>
+</html>

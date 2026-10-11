@@ -1,0 +1,49 @@
+---
+/* Icônes Phosphor (regular), insérées en SVG au build : aucun JavaScript,
+   aucune requête réseau. Seules les icônes listées ici sont embarquées. */
+import arrowUpRight from "@phosphor-icons/core/assets/regular/arrow-up-right.svg?raw";
+import arrowDownRight from "@phosphor-icons/core/assets/regular/arrow-down-right.svg?raw";
+import arrowRight from "@phosphor-icons/core/assets/regular/arrow-right.svg?raw";
+import arrowLeft from "@phosphor-icons/core/assets/regular/arrow-left.svg?raw";
+import arrowUp from "@phosphor-icons/core/assets/regular/arrow-up.svg?raw";
+import sun from "@phosphor-icons/core/assets/regular/sun.svg?raw";
+import moon from "@phosphor-icons/core/assets/regular/moon.svg?raw";
+import copy from "@phosphor-icons/core/assets/regular/copy.svg?raw";
+import check from "@phosphor-icons/core/assets/regular/check.svg?raw";
+import githubLogo from "@phosphor-icons/core/assets/regular/github-logo.svg?raw";
+import linkedinLogo from "@phosphor-icons/core/assets/regular/linkedin-logo.svg?raw";
+import printer from "@phosphor-icons/core/assets/regular/printer.svg?raw";
+import downloadSimple from "@phosphor-icons/core/assets/regular/download-simple.svg?raw";
+import pause from "@phosphor-icons/core/assets/regular/pause.svg?raw";
+import play from "@phosphor-icons/core/assets/regular/play.svg?raw";
+
+const icons = {
+  "arrow-up-right": arrowUpRight,
+  "arrow-down-right": arrowDownRight,
+  "arrow-right": arrowRight,
+  "arrow-left": arrowLeft,
+  "arrow-up": arrowUp,
+  sun,
+  moon,
+  copy,
+  check,
+  github: githubLogo,
+  linkedin: linkedinLogo,
+  printer,
+  download: downloadSimple,
+  pause,
+  play,
+};
+
+export type IconName = keyof typeof icons;
+
+interface Props {
+  name: IconName;
+  class?: string;
+}
+
+const { name, class: className } = Astro.props;
+const svg = icons[name].replace("<svg ", `<svg class="icon${className ? ` ${className}` : ""}" aria-hidden="true" focusable="false" `);
+---
+
+<Fragment set:html={svg} />

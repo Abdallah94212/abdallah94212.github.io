@@ -1,0 +1,455 @@
+---
+/* Le CV : une feuille A4 composée une seule fois, en em. À l'écran, elle est
+   mise à l'échelle de sa largeur ; à l'impression, elle prend la page entière.
+   Le PDF à télécharger est généré à partir de cette page (npm run cv:pdf).
+
+   Polices statiques (et non variables) : Chrome les intègre au PDF comme du
+   vrai texte, que les logiciels de recrutement lisent sans difficulté. */
+import "@fontsource/mona-sans/latin-400.css";
+import "@fontsource/mona-sans/latin-600.css";
+import "@fontsource/mona-sans/latin-800.css";
+import "@fontsource/jetbrains-mono/latin-500.css";
+import monaRegular from "@fontsource/mona-sans/files/mona-sans-latin-400-normal.woff2?url";
+import monaSemibold from "@fontsource/mona-sans/files/mona-sans-latin-600-normal.woff2?url";
+import monaExtrabold from "@fontsource/mona-sans/files/mona-sans-latin-800-normal.woff2?url";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import CvEntry from "../components/CvEntry.astro";
+import Icon from "../components/Icon.astro";
+import { languages, profile } from "../data/profile";
+import { projectBySlug } from "../data/projects";
+import { cvAward, cvEducation, cvExperience, cvHeadline, cvInterests, cvOtherProjects, cvProjects, cvSkills, cvSummary } from "../data/cv";
+import { url } from "../lib/url";
+
+const pdfName = "CV-Abdallah-Borji.pdf";
+
+/* Typographie française : espace insécable avant « : ; ! ? » et dans les
+   guillemets ; un « · » ne commence jamais une ligne. */
+const fr = (text: string) => text.replace(/ ([:;!?»·])/g, "\u00a0$1").replace(/« /g, "«\u00a0");
+
+const shortUrl = (href: string) => href.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
+const site = Astro.site ? new URL(url("/"), Astro.site).href : undefined;
+const contacts = [
+  { text: profile.email, href: `mailto:${profile.email}` },
+  { text: profile.phone, href: `tel:${profile.phoneHref}` },
+  { text: profile.location },
+  { text: shortUrl(profile.github), href: profile.github },
+  { text: shortUrl(profile.linkedin), href: profile.linkedin },
+  ...(site ? [{ text: shortUrl(site), href: site }] : []),
+];
+
+const projects = cvProjects.map((item) => {
+  const project = projectBySlug(item.slug);
+  if (!project) throw new Error(`Projet introuvable : ${item.slug}`);
+  return { ...item, title: project.title, repo: project.repo };
+});
+
+const skills = [...cvSkills, { title: "Langues", items: languages.map((language) => `${language.name} (${language.level})`).join(", ") }];
+---
+
+<BaseLayout
+  page="cv"
+  title={`${profile.name} · CV`}
+  description={`CV d’${profile.name}, étudiant en Pré-MSc à Epitech : expériences, formation, projets et compétences. Version imprimable et PDF.`}
+>
+  <Fragment slot="head">
+    <link rel="preload" href={monaRegular} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={monaSemibold} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={monaExtrabold} as="font" type="font/woff2" crossorigin />
+  </Fragment>
+
+  <div class="cv-toolbar">
+    <a class="link" href={url("/")}><Icon name="arrow-left" /> Retour au portfolio</a>
+    <div class="cv-toolbar__actions">
+      <button class="link" type="button" data-print hidden>Imprimer <Icon name="printer" /></button>
+      <a class="button" href={url(`/${pdfName}`)} download={pdfName}>Télécharger le PDF <Icon name="download" /></a>
+    </div>
+  </div>
+
+  <div class="cv-frame">
+    <article class="cv" aria-labelledby="cv-name">
+      <header class="cv-head">
+        <div class="cv-head__identity">
+          <h1 id="cv-name">{profile.name}</h1>
+          <p class="cv-head__status">{cvHeadline.status}</p>
+          <p class="cv-head__fields">{fr(cvHeadline.fields)}</p>
+          <p class="cv-head__availability">{cvHeadline.availability}</p>
+        </div>
+        <ul class="cv-head__contact" aria-label="Coordonnées">
+          {contacts.map((contact) => <li>{contact.href ? <a href={contact.href}>{contact.text}</a> : contact.text}</li>)}
+        </ul>
+      </header>
+
+      <section class="cv-section" aria-labelledby="cv-profil">
+        <h2 id="cv-profil">Profil</h2>
+        <div class="cv-section__body">
+          <p>{fr(cvSummary)}</p>
+        </div>
+      </section>
+
+      <section class="cv-section" aria-labelledby="cv-experience">
+        <h2 id="cv-experience">Expérience professionnelle</h2>
+        <div class="cv-section__body">
+          {
+            cvExperience.map((entry) => (
+              <CvEntry title={entry.title} place={entry.place} meta={entry.when} context={entry.context && fr(entry.context)} points={entry.points?.map(fr)} />
+            ))
+          }
+        </div>
+      </section>
+
+      <section class="cv-section cv-section--compact" aria-labelledby="cv-formation">
+        <h2 id="cv-formation">Formation</h2>
+        <div class="cv-section__body">
+          {cvEducation.map((entry) => <CvEntry title={entry.title} place={entry.place} meta={entry.when} context={entry.context && fr(entry.context)} />)}
+        </div>
+      </section>
+
+      <section class="cv-section" aria-labelledby="cv-projets">
+        <h2 id="cv-projets">Projets</h2>
+        <div class="cv-section__body">
+          {projects.map((project) => <CvEntry title={project.title} href={project.repo} place={project.subtitle} meta={project.stack} context={fr(project.text)} />)}
+          <p class="cv-other"><strong>Autres projets</strong>{"\u00a0· "}{cvOtherProjects}</p>
+        </div>
+      </section>
+
+      <section class="cv-section" aria-labelledby="cv-competences">
+        <h2 id="cv-competences">Compétences</h2>
+        <dl class="cv-section__body cv-skills">
+          {
+            skills.map((group) => (
+              <div>
+                <dt>{group.title}</dt>
+                <dd>{group.items}</dd>
+              </div>
+            ))
+          }
+        </dl>
+      </section>
+
+      <section class="cv-section" aria-labelledby="cv-distinction">
+        <h2 id="cv-distinction">Distinction</h2>
+        <div class="cv-section__body">
+          <CvEntry title={cvAward.title} place={fr(cvAward.place)} meta={cvAward.when} />
+        </div>
+      </section>
+
+      <section class="cv-section" aria-labelledby="cv-interets">
+        <h2 id="cv-interets">Centres d’intérêt</h2>
+        <div class="cv-section__body">
+          <p>{fr(cvInterests.join(" · "))}</p>
+        </div>
+      </section>
+    </article>
+  </div>
+</BaseLayout>
+
+<style>
+  /* ---------- La page autour de la feuille ---------- */
+  .cv-toolbar,
+  .cv-frame {
+    width: min(100% - 2 * var(--gutter), 61.25rem);
+    margin-inline: auto;
+  }
+
+  .cv-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1.5rem;
+    padding-top: calc(var(--header-h) + 2rem);
+    padding-bottom: 1.5rem;
+  }
+
+  .cv-toolbar__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.5rem;
+  }
+
+  .cv-frame {
+    margin-bottom: var(--section);
+    container-type: inline-size;
+  }
+
+  /* ---------- La feuille ----------
+     Une seule composition, en em : 1em = 8,6 pt sur une page A4 de 210 mm
+     (soit 69,2 em). À l'écran, la taille de base suit la largeur de la
+     feuille, pour garder exactement les mêmes proportions qu'à l'impression. */
+  .cv {
+    /* Le papier reste clair dans les deux thèmes, comme un document. */
+    --cv-paper: #fff;
+    --cv-ink: #0c0e13;
+    --cv-text: #2a2e37;
+    --cv-muted: #5a606c;
+    --cv-line: #dcdfe5;
+    --cv-accent: #2a45f2;
+    --cv-sans: "Mona Sans", "Helvetica Neue", Arial, sans-serif;
+    --cv-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    --cv-label: 8.6em;
+    --cv-gutter: 1.65em;
+    --cv-space: 0.82em;
+
+    padding: 3.95em 4.95em;
+    background: var(--cv-paper);
+    color: var(--cv-text);
+    font-family: var(--cv-sans);
+    font-size: calc(100cqi / 69.2);
+    font-weight: 400;
+    line-height: 1.4;
+    font-synthesis: none;
+    aspect-ratio: 210 / 297;
+    border-radius: var(--radius-media);
+    box-shadow:
+      0 0 0 1px var(--line),
+      var(--shadow);
+  }
+
+  .cv :global(a) {
+    color: inherit;
+  }
+
+  .cv :global(::selection) {
+    background: var(--cv-accent);
+    color: #fff;
+  }
+
+  .cv strong {
+    font-weight: 600;
+    color: var(--cv-ink);
+  }
+
+  /* ---------- En-tête ---------- */
+  .cv-head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 1em 2em;
+    padding-bottom: 1em;
+    border-bottom: 0.16em solid var(--cv-ink);
+  }
+
+  .cv-head h1 {
+    margin-bottom: 0.18em;
+    color: var(--cv-ink);
+    font-size: 3.1em;
+    font-weight: 800;
+    font-stretch: 100%;
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+  }
+
+  /* Le point bleu, signature du portfolio. Dessiné en CSS pour ne pas
+     s'ajouter au nom dans le texte du PDF. */
+  .cv-head h1::after {
+    content: "";
+    display: inline-block;
+    width: 0.15em;
+    height: 0.15em;
+    margin-left: 0.05em;
+    border-radius: 50%;
+    background: var(--cv-accent);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .cv-head__status,
+  .cv-head__fields {
+    font-size: 1.16em;
+    line-height: 1.32;
+  }
+
+  .cv-head__status {
+    color: var(--cv-ink);
+    font-weight: 600;
+  }
+
+  .cv-head__availability {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 0.55em;
+    margin-top: 0.75em;
+    padding: 0.28em 0.85em 0.3em 0.7em;
+    border: 1px solid var(--cv-accent);
+    border-radius: 999px;
+    color: var(--cv-accent);
+    font-weight: 600;
+  }
+
+  .cv-head__availability::before {
+    content: "";
+    flex: none;
+    margin-top: 0.475em;
+    width: 0.45em;
+    height: 0.45em;
+    border-radius: 50%;
+    background: currentColor;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .cv-head__contact {
+    font-size: 0.96em;
+    line-height: 1.5;
+    text-align: right;
+  }
+
+  .cv-head__contact a {
+    text-decoration: none;
+  }
+
+  /* À l'écran, les liens de contact restent faciles à viser au doigt. */
+  @media screen {
+    .cv-head__contact {
+      line-height: 1.8;
+    }
+  }
+
+  /* ---------- Rubriques : intitulé à gauche, contenu à droite ---------- */
+  .cv-section {
+    display: grid;
+    grid-template-columns: var(--cv-label) 1fr;
+    align-items: baseline;
+    column-gap: var(--cv-gutter);
+    padding-block: var(--cv-space);
+  }
+
+  .cv-section + .cv-section {
+    border-top: 1px solid var(--cv-line);
+  }
+
+  .cv-section h2 {
+    color: var(--cv-accent);
+    font-family: var(--cv-mono);
+    font-size: 0.76em;
+    font-weight: 500;
+    font-stretch: 100%;
+    line-height: 1.45;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    text-wrap: wrap;
+  }
+
+  .cv-section--compact {
+    --cv-entry-gap: 0.4em;
+  }
+
+  .cv-other {
+    margin-top: 0.6em;
+  }
+
+  .cv-skills div {
+    display: grid;
+    grid-template-columns: 7.6em 1fr;
+    gap: 1em;
+  }
+
+  .cv-skills div + div {
+    margin-top: 0.15em;
+  }
+
+  .cv-skills dt {
+    color: var(--cv-ink);
+    font-weight: 600;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .cv-head__contact a:hover {
+      text-decoration: underline;
+      text-underline-offset: 0.2em;
+    }
+  }
+
+  /* Sur petit écran, la barre d'outils s'empile toujours : sa hauteur ne
+     dépend ni de la police chargée, ni de l'apparition du bouton Imprimer. */
+  @media screen and (max-width: 40em) {
+    .cv-toolbar {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+
+  /* ---------- Téléphone et tablette : la feuille se recompose ---------- */
+  @media screen and (max-width: 55.99em) {
+    .cv {
+      padding: clamp(1.25rem, 5vw, 2.5rem);
+      font-size: 0.9375rem;
+      line-height: 1.5;
+      aspect-ratio: auto;
+    }
+
+    .cv-head {
+      grid-template-columns: 1fr;
+      align-items: start;
+    }
+
+    .cv-head h1 {
+      font-size: clamp(2.25rem, 9vw, 3rem);
+    }
+
+    .cv-head__availability {
+      line-height: 1.3;
+    }
+
+    .cv-head__contact {
+      text-align: left;
+    }
+
+    .cv-section {
+      display: block;
+      padding-block: 1.25em;
+    }
+
+    .cv-section h2 {
+      margin-bottom: 0.75em;
+    }
+
+    .cv-skills div {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+
+    .cv-skills div + div {
+      margin-top: 0.5em;
+    }
+  }
+
+  /* ---------- Impression : une page A4, sans en-tête ni pied de page ---------- */
+  @media print {
+    @page {
+      size: A4;
+      margin: 0;
+    }
+
+    :global(.site-header),
+    :global(.site-footer),
+    :global(.skip-link),
+    .cv-toolbar {
+      display: none !important;
+    }
+
+    :global(html),
+    :global(body) {
+      min-height: 0;
+      background: #fff;
+    }
+
+    .cv-frame {
+      width: auto;
+      margin: 0;
+      container-type: normal;
+    }
+
+    .cv {
+      font-size: 8.6pt;
+      aspect-ratio: auto;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    .cv :global(a) {
+      text-decoration: none;
+    }
+  }
+</style>

@@ -1,0 +1,85 @@
+---
+import { Picture } from "astro:assets";
+import type { Shot } from "../data/projects";
+
+interface Props {
+  shot: Shot;
+  sizes: string;
+  loading?: "eager" | "lazy";
+  class?: string;
+  /** Nom partagé avec une autre page pour la transition entre pages. */
+  transitionName?: string;
+  caption?: boolean;
+  /** Le contenu glisse légèrement dans son cadre au défilement. */
+  parallax?: boolean;
+}
+
+const { shot, sizes, loading = "lazy", class: className, transitionName, caption = false, parallax = false } = Astro.props;
+const widths = shot.mobile ? [320, 480, 780] : [640, 960, 1440, 2000];
+const classes = ["shot", shot.mobile && "shot--mobile", className].filter(Boolean).join(" ");
+---
+
+<figure class={classes} style={transitionName ? `view-transition-name: ${transitionName}` : undefined}>
+  <div class="shot__viewport">
+    <Picture
+      src={shot.src}
+      alt={shot.alt}
+      formats={["avif", "webp"]}
+      widths={widths}
+      sizes={sizes}
+      loading={loading}
+      decoding="async"
+      class="shot__img"
+      data-parallax={parallax ? "" : undefined}
+    />
+  </div>
+  {caption && <figcaption class="shot__caption">{shot.caption}</figcaption>}
+</figure>
+
+<style>
+  .shot {
+    position: relative;
+    min-width: 0;
+  }
+
+  .shot__viewport {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius-media);
+    background: var(--bg-raised);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--ink) 10%, transparent),
+      var(--shadow);
+    isolation: isolate;
+  }
+
+  .shot__viewport :global(img) {
+    width: 100%;
+    height: auto;
+  }
+
+  /* L'image est un peu plus grande que son cadre pour pouvoir glisser. */
+  .shot__viewport :global(img[data-parallax]) {
+    transform: scale(1.08);
+    transform-origin: 50% 50%;
+  }
+
+  /* Les écrans de téléphone gardent un cadre d'appareil : rayon plus grand,
+     bordure épaisse. C'est la seule exception au rayon de 10px. */
+  .shot--mobile .shot__viewport {
+    border-radius: 2rem;
+    border: 0.45rem solid #101217;
+    background: #101217;
+  }
+
+  .shot--mobile .shot__viewport :global(img) {
+    border-radius: 1.55rem;
+  }
+
+  .shot__caption {
+    margin-top: 0.85rem;
+    font-size: var(--fs-small);
+    color: var(--muted);
+    max-width: 60ch;
+  }
+</style>

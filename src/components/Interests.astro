@@ -1,0 +1,90 @@
+---
+import { interests } from "../data/profile";
+---
+
+<section class="interests wrap" aria-labelledby="interests-title">
+  <h2 class="interests__title label" id="interests-title">En dehors du code</h2>
+  <ul class="interests__list">
+    {
+      interests.map((interest) => (
+        <li class="interest" data-reveal="fade">
+          <h3 class="interest__name">{interest.name}</h3>
+          <p class="interest__keyword">{interest.keyword}</p>
+          <p class="interest__text">{interest.text}</p>
+        </li>
+      ))
+    }
+  </ul>
+</section>
+
+<style>
+  .interests {
+    padding-block: calc(var(--section) * 0.4) var(--section);
+  }
+
+  .interests__title {
+    margin-bottom: 1.5rem;
+  }
+
+  .interests__list {
+    border-top: 1px solid var(--line);
+  }
+
+  .interest {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: clamp(1rem, 2vw, 2rem);
+    align-items: baseline;
+    padding-block: clamp(1rem, 2vw, 1.75rem);
+    border-bottom: 1px solid var(--line);
+  }
+
+  /* Le mot s'élargit au survol : la police variable change de largeur sans
+     déplacer le reste de la ligne. */
+  .interest__name {
+    grid-column: 1 / 7;
+    font-size: clamp(3.75rem, 1.5rem + 9vw, 11rem);
+    font-weight: 780;
+    font-stretch: 100%;
+    line-height: 0.86;
+    letter-spacing: -0.055em;
+    transition: font-stretch 0.7s var(--ease-out);
+  }
+
+  .interest__keyword {
+    grid-column: 7 / 10;
+    font-size: var(--fs-lead);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  .interest__text {
+    grid-column: 10 / -1;
+    font-size: var(--fs-small);
+    color: var(--muted);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .interest:hover .interest__name {
+      font-stretch: 125%;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .interest {
+      grid-template-columns: 1fr;
+      gap: 0.5rem;
+      padding-block: 1.75rem;
+    }
+
+    .interest__name,
+    .interest__keyword,
+    .interest__text {
+      grid-column: 1;
+    }
+
+    .interest__keyword {
+      margin-top: 0.5rem;
+    }
+  }
+</style>

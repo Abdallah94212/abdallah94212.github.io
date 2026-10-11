@@ -1,0 +1,290 @@
+---
+import Icon from "./Icon.astro";
+import Shot from "./Shot.astro";
+import type { Project } from "../data/projects";
+import { projectUrl } from "../lib/url";
+
+interface Props {
+  project: Project;
+}
+
+const { project } = Astro.props;
+const href = projectUrl(project.slug);
+const toneStyle = `--bg: ${project.tone.bg}; --ink: ${project.tone.ink}; --muted: ${project.tone.muted};`;
+---
+
+<article class={`panel panel--${project.layout}`} style={toneStyle} data-panel aria-labelledby={`panel-${project.slug}`}>
+  <div class="panel__inner wrap" data-panel-inner>
+    <div class="panel__text">
+      <p class="panel__meta label">
+        <span>{project.kind}</span>
+        <span>{project.context}</span>
+      </p>
+      <h3 class="panel__title" id={`panel-${project.slug}`}>
+        <a href={href} style={`view-transition-name: title-${project.slug}; view-transition-class: project-title`} data-reveal="title" data-astro-prefetch>{project.title}</a>
+      </h3>
+      <p class="panel__pitch" data-reveal="fade">{project.pitch}</p>
+      <ul class="chips panel__stack" aria-label="Technologies" data-reveal="fade">
+        {project.stack.map((item) => <li>{item}</li>)}
+      </ul>
+      <div class="panel__actions" data-reveal="fade">
+        <a class="button" href={href} data-astro-prefetch>
+          Lire l’étude de cas <Icon name="arrow-right" />
+          <span class="visually-hidden"> : {project.title}</span>
+        </a>
+        <a class="link" href={project.repo} target="_blank" rel="noopener noreferrer">
+          Code source <Icon name="arrow-up-right" />
+          <span class="visually-hidden"> de {project.title} (nouvel onglet)</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="panel__media" data-reveal="media">
+      <a class="panel__media-link" href={href} tabindex="-1" aria-hidden="true" data-astro-prefetch>
+        <Shot
+          shot={project.cover}
+          sizes="(min-width: 900px) 56vw, 92vw"
+          class="panel__cover"
+          transitionName={`media-${project.slug}`}
+          parallax
+        />
+      </a>
+      <Shot
+        shot={project.secondary}
+        sizes={project.secondary.mobile ? "(min-width: 900px) 14vw, 36vw" : "(min-width: 900px) 26vw, 50vw"}
+        class="panel__secondary"
+      />
+    </div>
+  </div>
+  <div class="panel__shade" aria-hidden="true" data-panel-shade></div>
+</article>
+
+<style>
+  .panel {
+    --accent: #8ea0ff;
+    --accent-ink: #0b0c10;
+    --line: color-mix(in srgb, var(--ink) 16%, transparent);
+    --shadow: 0 40px 80px -40px rgb(0 0 0 / 80%);
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 100svh;
+    padding-block: calc(var(--header-h) + 2rem) 3rem;
+    background: var(--bg);
+    color: var(--ink);
+    border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+    box-shadow: 0 -24px 60px -30px rgb(0 0 0 / 45%);
+    overflow: clip;
+    transform-origin: 50% 0;
+  }
+
+  .panel__inner {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: clamp(1rem, 2vw, 2rem);
+    align-items: center;
+    width: 100%;
+  }
+
+  .panel__text {
+    grid-column: 1 / 6;
+    display: grid;
+    gap: 1.5rem;
+    justify-items: start;
+  }
+
+  .panel__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.25rem;
+    color: var(--muted);
+  }
+
+  .panel__title {
+    font-size: clamp(2.75rem, 1.2rem + 4.6vw, 6.75rem);
+    font-weight: 760;
+    font-stretch: 116%;
+    line-height: 0.9;
+    letter-spacing: -0.05em;
+  }
+
+  /* Le lien est découpé en lignes à l'apparition : il doit être un bloc. */
+  .panel__title a {
+    display: block;
+    text-decoration: none;
+  }
+
+  .panel__pitch {
+    max-width: 36ch;
+    font-size: clamp(1.05rem, 0.95rem + 0.4vw, 1.3rem);
+    line-height: 1.45;
+    color: color-mix(in srgb, var(--ink) 86%, transparent);
+  }
+
+  .panel__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.75rem;
+    margin-top: 0.5rem;
+  }
+
+  .panel__media {
+    position: relative;
+    grid-column: 7 / -1;
+  }
+
+  .panel__media-link {
+    display: block;
+  }
+
+  .panel__media :global(.panel__cover .shot__viewport) {
+    transition: transform 0.8s var(--ease-out);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .panel__media-link:hover :global(.panel__cover .shot__viewport),
+    .panel:has(.panel__title a:hover) :global(.panel__cover .shot__viewport) {
+      transform: scale(1.015);
+    }
+  }
+
+  .panel__media :global(.panel__secondary) {
+    position: absolute;
+    width: 46%;
+    left: -12%;
+    bottom: -14%;
+  }
+
+  .panel__media :global(.panel__secondary.shot--mobile) {
+    width: 22%;
+    left: auto;
+    right: -4%;
+    bottom: -10%;
+  }
+
+  /* Variante miroir : visuel à gauche. */
+  .panel--media-left .panel__text {
+    grid-column: 8 / -1;
+    grid-row: 1;
+  }
+
+  .panel--media-left .panel__media {
+    grid-column: 1 / 7;
+    grid-row: 1;
+  }
+
+  /* Variante large : texte en haut, visuel qui déborde en bas de la fiche. */
+  .panel--media-wide {
+    align-items: flex-start;
+  }
+
+  .panel--media-wide .panel__inner {
+    row-gap: clamp(2rem, 5vh, 3.5rem);
+  }
+
+  .panel--media-wide .panel__text {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: inherit;
+    align-items: end;
+  }
+
+  .panel--media-wide .panel__meta,
+  .panel--media-wide .panel__title {
+    grid-column: 1 / 8;
+  }
+
+  .panel--media-wide .panel__pitch,
+  .panel--media-wide .panel__stack,
+  .panel--media-wide .panel__actions {
+    grid-column: 8 / -1;
+  }
+
+  .panel--media-wide .panel__title {
+    grid-row: 2 / 5;
+    align-self: end;
+  }
+
+  .panel--media-wide .panel__media {
+    grid-column: 2 / 12;
+  }
+
+  .panel--media-wide .panel__media :global(.panel__secondary.shot--mobile) {
+    width: 17%;
+    right: -6%;
+    bottom: 8%;
+  }
+
+  .panel__shade {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* ---------- Empilement (grands écrans uniquement) ---------- */
+
+  @media (min-width: 1024px) and (min-height: 680px) {
+    .panel {
+      position: sticky;
+      top: 0;
+    }
+
+    .panel--media-wide {
+      max-height: 100svh;
+    }
+
+    /* Avec JavaScript, GSAP épingle les fiches à la place de sticky. */
+    :global(.is-enhanced) > .panel {
+      position: relative;
+    }
+  }
+
+  /* ---------- Mobile ---------- */
+
+  @media (max-width: 900px) {
+    .panel {
+      min-height: 0;
+      /* Place pour la capture secondaire qui déborde sous la principale. */
+      padding-block: 4rem 6.5rem;
+    }
+
+    .panel__text,
+    .panel--media-left .panel__text,
+    .panel--media-wide .panel__text {
+      grid-column: 1 / -1;
+      grid-row: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .panel--media-wide .panel__text > * {
+      grid-column: 1 / -1;
+      grid-row: auto;
+    }
+
+    .panel__media,
+    .panel--media-left .panel__media,
+    .panel--media-wide .panel__media {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      margin-top: 3rem;
+    }
+
+    .panel__media :global(.panel__secondary) {
+      width: 52%;
+      left: auto;
+      right: -2%;
+      bottom: -18%;
+    }
+
+    .panel__media :global(.panel__secondary.shot--mobile),
+    .panel--media-wide .panel__media :global(.panel__secondary.shot--mobile) {
+      width: 30%;
+      right: -1%;
+      bottom: -12%;
+    }
+  }
+</style>

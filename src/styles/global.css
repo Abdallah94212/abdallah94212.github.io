@@ -1,0 +1,444 @@
+/* Fondations communes : tokens, typographie, liens et boutons.
+   Les composants gardent leurs propres styles (scopés par Astro). */
+
+:root {
+  color-scheme: light;
+  --bg: #f2f3f5;
+  --bg-raised: #fafbfc;
+  --ink: #0c0e13;
+  --ink-soft: #2a2e37;
+  --muted: #5a606c;
+  --line: #d9dce3;
+  --line-strong: #b5bac5;
+  --accent: #2a45f2;
+  --accent-ink: #f5f6f8;
+  --shadow: 0 30px 60px -30px rgb(12 14 19 / 35%);
+
+  --font-sans: "Mona Sans Variable", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --fs-label: 0.75rem;
+  --fs-small: 0.875rem;
+  --fs-body: clamp(1rem, 0.96rem + 0.2vw, 1.125rem);
+  --fs-lead: clamp(1.25rem, 1rem + 1vw, 1.75rem);
+  --fs-h3: clamp(1.5rem, 1.1rem + 1.6vw, 2.5rem);
+  --fs-h2: clamp(3rem, 1.4rem + 6.4vw, 8.5rem);
+
+  --gutter: clamp(1rem, 3.2vw, 3rem);
+  --max: 1680px;
+  --section: clamp(6rem, 4rem + 9vw, 12rem);
+  --header-h: 4.25rem;
+
+  /* Formes : pilules pour les contrôles, 10px pour les médias, 20px pour les fiches projets. */
+  --radius-media: 10px;
+  --radius-sheet: 20px;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 180ms;
+  --dur: 420ms;
+
+  /* Couches : en-tête, menu mobile, lien d'évitement. */
+  --z-header: 50;
+  --z-menu: 60;
+  --z-skip: 70;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b0c10;
+  --bg-raised: #14161c;
+  --ink: #eceef3;
+  --ink-soft: #c9ccd4;
+  --muted: #9aa0ac;
+  --line: #252831;
+  --line-strong: #3d414c;
+  --accent: #8094ff;
+  --accent-ink: #0b0c10;
+  --shadow: 0 30px 60px -30px rgb(0 0 0 / 70%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0b0c10;
+    --bg-raised: #14161c;
+    --ink: #eceef3;
+    --ink-soft: #c9ccd4;
+    --muted: #9aa0ac;
+    --line: #252831;
+    --line-strong: #3d414c;
+    --accent: #8094ff;
+    --accent-ink: #0b0c10;
+    --shadow: 0 30px 60px -30px rgb(0 0 0 / 70%);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-padding-top: calc(var(--header-h) + 1rem);
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: 1.55;
+  font-kerning: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: clip;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+figure,
+blockquote,
+dl,
+dd {
+  margin: 0;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 700;
+  font-stretch: 112%;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+img,
+picture,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+img {
+  height: auto;
+}
+
+a {
+  color: inherit;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a,
+button {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* ---------- Utilitaires ---------- */
+
+.wrap {
+  width: 100%;
+  max-width: var(--max);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: var(--z-skip);
+  padding: 0.75rem 1.1rem;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: var(--fs-small);
+  text-decoration: none;
+  transform: translateY(-180%);
+}
+
+.skip-link:focus-visible {
+  transform: none;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  font-weight: 450;
+  letter-spacing: 0;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.section-title {
+  font-size: var(--fs-h2);
+  font-weight: 760;
+  font-stretch: 118%;
+  line-height: 0.9;
+  letter-spacing: -0.045em;
+}
+
+.icon {
+  width: 1em;
+  height: 1em;
+  flex: none;
+}
+
+/* ---------- Boutons et liens ---------- */
+
+.button {
+  --button-bg: var(--ink);
+  --button-ink: var(--bg);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-height: 3.25rem;
+  padding: 0.85rem 1.4rem 0.85rem 1.6rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--button-bg);
+  color: var(--button-ink);
+  font-size: var(--fs-small);
+  font-weight: 560;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  isolation: isolate;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+/* Le fond accent monte depuis le bas au survol : un retour visuel net, sans
+   changer la taille du bouton. */
+.button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--accent);
+  transform: translateY(101%);
+  transition: transform var(--dur) var(--ease-out);
+}
+
+.button .icon {
+  font-size: 1.15em;
+  transition: transform var(--dur) var(--ease-out);
+}
+
+.button:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .button:hover::before {
+    transform: none;
+  }
+
+  .button:hover {
+    color: var(--accent-ink);
+  }
+
+  .button:hover .icon {
+    transform: translate(2px, 2px);
+  }
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  font-size: var(--fs-small);
+  font-weight: 520;
+  text-decoration: none;
+  background: linear-gradient(currentColor, currentColor) no-repeat 0 calc(100% - 0.7rem) / 100% 1px;
+  transition: background-size var(--dur) var(--ease-out), color var(--dur-fast);
+}
+
+.link .icon {
+  transition: transform var(--dur) var(--ease-out);
+}
+
+/* Le soulignement se retire vers la droite puis revient depuis la gauche. */
+@media (hover: hover) and (pointer: fine) {
+  .link:hover {
+    background-position: 100% calc(100% - 0.7rem);
+    background-size: 0 1px;
+  }
+
+  .link:hover .icon {
+    transform: translate(2px, -2px);
+  }
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chips li {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  opacity: 0.85;
+}
+
+/* ---------- Défilement doux (Lenis) ---------- */
+
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis:not(.lenis-autoToggle).lenis-stopped {
+  overflow: clip;
+}
+
+.lenis.lenis-smooth iframe {
+  pointer-events: none;
+}
+
+/* ---------- Transitions entre pages ---------- */
+
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-group(*) {
+  animation-duration: 0.7s;
+  animation-timing-function: var(--ease-out);
+}
+
+::view-transition-old(root) {
+  animation: 0.35s var(--ease-in-out) both vt-fade-out;
+}
+
+::view-transition-new(root) {
+  animation: 0.55s var(--ease-out) 0.1s both vt-fade-in;
+}
+
+/* Les titres changent de nombre de lignes d'une page à l'autre : l'ancien
+   s'efface vite pendant que le nouveau prend sa place, sans image fantôme. */
+::view-transition-old(*.project-title) {
+  animation: 0.18s var(--ease-in-out) both vt-fade;
+}
+
+::view-transition-new(*.project-title) {
+  animation: 0.5s var(--ease-out) 0.12s both vt-fade reverse;
+}
+
+@keyframes vt-fade {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+    transform: translateY(-2rem);
+  }
+}
+
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(2rem);
+  }
+}
+
+/* Changement de thème : un cercle révèle le nouveau thème (voir theme.ts).
+   Les éléments nommés pour la navigation sont ignorés le temps du cercle. */
+html.theme-transition *,
+html.theme-transition *::before {
+  view-transition-name: none !important;
+}
+
+html.theme-transition::view-transition-old(root),
+html.theme-transition::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @view-transition {
+    navigation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

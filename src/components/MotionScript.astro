@@ -1,0 +1,12 @@
+---
+/* Ajoute la couche de mouvement (GSAP + Lenis) à la page qui l'inclut.
+   Les pages sans animation au défilement (CV, 404) ne la chargent pas.
+   Elle est évaluée juste après le premier affichage : le contenu apparaît
+   d'abord, les animations prennent le relais une image plus tard. */
+---
+
+<script>
+  requestAnimationFrame(() => {
+    setTimeout(() => import("../scripts/motion"), 0);
+  });
+</script>

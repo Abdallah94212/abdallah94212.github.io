@@ -1,0 +1,328 @@
+---
+import { Picture } from "astro:assets";
+import { evidenceLabels, languages, skillGroups } from "../data/profile";
+import { projects } from "../data/projects";
+
+const evidence = [
+  ...projects.map((project) => ({ id: project.slug, label: project.title, image: project.cover.src, code: "" })),
+  ...Object.entries(evidenceLabels).map(([id, item]) => ({ id, label: item.label, image: undefined, code: item.code })),
+];
+const labelOf = (id: string) => evidence.find((item) => item.id === id)?.label ?? id;
+---
+
+<section class="skills wrap" id="competences" aria-labelledby="skills-title" data-skills>
+  <header class="skills__head">
+    <h2 class="section-title" id="skills-title" data-reveal="title">Compétences</h2>
+    <p class="skills__intro" data-reveal="fade">
+      Chaque compétence renvoie à l’endroit où je l’ai mise en pratique. Survolez-en une, ou sélectionnez-la.
+    </p>
+  </header>
+
+  <div class="skills__layout">
+    <div class="skills__groups">
+      {
+        skillGroups.map((group) => (
+          <div class="skills__group" data-reveal="fade">
+            <h3 class="skills__group-title label">{group.title}</h3>
+            <ul class="skills__list">
+              {group.skills.map((skill) => (
+                <li>
+                  <button class="skill" type="button" aria-pressed="false" data-skill data-used-in={skill.usedIn.join(" ")}>
+                    {skill.name}
+                    <span class="visually-hidden"> : mis en pratique dans {skill.usedIn.map(labelOf).join(", ")}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      }
+    </div>
+
+    <aside class="proof" aria-label="Où ces compétences ont été mises en pratique">
+      <p class="proof__status label" data-proof-status>Mis en pratique dans</p>
+      <ul class="proof__list">
+        {
+          evidence.map((item) => (
+            <li class="proof__item" data-evidence={item.id}>
+              {item.image ? (
+                <Picture src={item.image} alt="" formats={["avif", "webp"]} widths={[240, 480]} sizes="160px" class="proof__thumb" loading="lazy" decoding="async" />
+              ) : (
+                <span class="proof__thumb proof__thumb--text" aria-hidden="true">
+                  {item.code}
+                </span>
+              )}
+              <span class="proof__label">{item.label}</span>
+            </li>
+          ))
+        }
+      </ul>
+    </aside>
+  </div>
+
+  <dl class="skills__languages">
+    {
+      languages.map((language) => (
+        <div>
+          <dt>{language.name}</dt>
+          <dd>{language.level}</dd>
+        </div>
+      ))
+    }
+  </dl>
+</section>
+
+<style>
+  .skills {
+    padding-block: var(--section);
+  }
+
+  .skills__head {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: clamp(1rem, 2vw, 2rem);
+    align-items: end;
+    padding-bottom: clamp(3rem, 6vw, 5rem);
+  }
+
+  .skills__head .section-title {
+    grid-column: 1 / 9;
+  }
+
+  .skills__intro {
+    grid-column: 9 / -1;
+    max-width: 32ch;
+    color: var(--muted);
+    padding-bottom: 0.6rem;
+  }
+
+  .skills__layout {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: clamp(1rem, 2vw, 2rem);
+    align-items: start;
+  }
+
+  .skills__groups {
+    grid-column: 1 / 9;
+    border-top: 1px solid var(--line);
+  }
+
+  .skills__group {
+    display: grid;
+    grid-template-columns: 7rem 1fr;
+    gap: 1rem;
+    padding-block: 1.6rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .skills__group-title {
+    padding-top: 0.8rem;
+  }
+
+  .skills__list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.1rem 0;
+  }
+
+  .skills__list li {
+    display: flex;
+    align-items: baseline;
+  }
+
+  .skills__list li:not(:last-child)::after {
+    content: "/";
+    margin-inline: 0.55rem;
+    color: var(--line-strong);
+    font-size: clamp(1.4rem, 0.95rem + 1.6vw, 2.6rem);
+    font-weight: 300;
+  }
+
+  .skill {
+    padding: 0.1rem 0;
+    border: 0;
+    background: none;
+    font-size: clamp(1.4rem, 0.95rem + 1.6vw, 2.6rem);
+    font-weight: 620;
+    font-stretch: 106%;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    text-align: left;
+    transition:
+      color var(--dur) var(--ease-out),
+      opacity var(--dur) var(--ease-out);
+  }
+
+  .skill[aria-pressed="true"] {
+    color: var(--accent);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.18em;
+  }
+
+  .skills.has-focus .skill:not(.is-lit) {
+    opacity: 0.28;
+  }
+
+  .skills.has-focus .skill.is-lit {
+    color: var(--accent);
+  }
+
+  /* ---------- Preuves ---------- */
+
+  .proof {
+    grid-column: 10 / -1;
+    position: sticky;
+    top: calc(var(--header-h) + 1.5rem);
+    display: grid;
+    gap: 1rem;
+  }
+
+  .proof__list {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .proof__item {
+    display: grid;
+    grid-template-columns: 4.5rem 1fr;
+    align-items: center;
+    gap: 0.9rem;
+    font-size: var(--fs-small);
+    font-weight: 540;
+    transition:
+      opacity var(--dur) var(--ease-out),
+      transform var(--dur) var(--ease-out);
+  }
+
+  .proof__item :global(.proof__thumb) {
+    width: 4.5rem;
+    height: 2.9rem;
+    object-fit: cover;
+    object-position: 50% 0;
+    border-radius: 6px;
+    box-shadow: 0 0 0 1px var(--line);
+    transition: filter var(--dur) var(--ease-out);
+  }
+
+  .proof__thumb--text {
+    display: grid;
+    place-items: center;
+    background: var(--bg-raised);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .skills.has-focus .proof__item:not(.is-lit) {
+    opacity: 0.3;
+  }
+
+  .skills.has-focus .proof__item:not(.is-lit) :global(.proof__thumb) {
+    filter: grayscale(1);
+  }
+
+  .skills.has-focus .proof__item.is-lit {
+    transform: translateX(-0.4rem);
+  }
+
+  .skills.has-focus .proof__item.is-lit :global(.proof__thumb) {
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+
+  .skills__languages {
+    display: flex;
+    gap: 3rem;
+    margin-top: 3rem;
+  }
+
+  .skills__languages div {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+  }
+
+  .skills__languages dt {
+    color: var(--muted);
+    font-size: var(--fs-small);
+  }
+
+  .skills__languages dd {
+    font-size: 1.75rem;
+    font-weight: 720;
+    font-stretch: 116%;
+    letter-spacing: -0.03em;
+  }
+
+  @media (max-width: 900px) {
+    .skills__head .section-title,
+    .skills__intro {
+      grid-column: 1 / -1;
+    }
+
+    .skills__intro {
+      margin-top: 1.25rem;
+    }
+
+    .skills__groups {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+
+    /* Sur téléphone, les preuves tiennent dans une barre fine qui reste
+       visible en haut pendant la lecture, et défile horizontalement. */
+    .proof {
+      grid-column: 1 / -1;
+      grid-row: 1;
+      z-index: 2;
+      top: calc(var(--header-h) + 0.5rem);
+      margin-bottom: 1.5rem;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--bg) 90%, transparent);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 0 0 1px var(--line);
+      overflow: hidden;
+    }
+
+    .proof__status {
+      display: none;
+    }
+
+    .proof__list {
+      display: flex;
+      gap: 1rem;
+      padding: 0.65rem 1rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+      white-space: nowrap;
+    }
+
+    .proof__item {
+      display: block;
+      font-size: 0.8rem;
+    }
+
+    .proof__item :global(.proof__thumb),
+    .proof__thumb--text {
+      display: none;
+    }
+
+    .skills.has-focus .proof__item.is-lit {
+      transform: none;
+      color: var(--accent);
+    }
+
+    .skills__group {
+      grid-template-columns: 1fr;
+      gap: 0.5rem;
+    }
+
+    .skills__group-title {
+      padding-top: 0;
+    }
+  }
+</style>

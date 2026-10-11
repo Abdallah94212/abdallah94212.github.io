@@ -1,0 +1,40 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Icon from "../components/Icon.astro";
+import { url } from "../lib/url";
+---
+
+<BaseLayout page="404" title="Page introuvable · Abdallah Borji" description="Cette page n’existe pas ou a changé d’adresse.">
+  <section class="lost wrap">
+    <p class="lost__code" aria-hidden="true">404<span>.</span></p>
+    <h1 class="lost__title">Cette page n’existe pas, ou plus.</h1>
+    <a class="button" href={url("/")}>Revenir à l’accueil <Icon name="arrow-right" /></a>
+  </section>
+</BaseLayout>
+
+<style>
+  .lost {
+    display: grid;
+    align-content: center;
+    justify-items: start;
+    gap: 2rem;
+    min-height: 100svh;
+    padding-top: var(--header-h);
+  }
+
+  .lost__code {
+    font-size: clamp(7rem, 30vw, 24rem);
+    font-weight: 800;
+    font-stretch: 125%;
+    letter-spacing: -0.07em;
+    line-height: 0.8;
+  }
+
+  .lost__code span {
+    color: var(--accent);
+  }
+
+  .lost__title {
+    font-size: var(--fs-h3);
+  }
+</style>

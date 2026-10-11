@@ -1,0 +1,100 @@
+---
+import Icon from "./Icon.astro";
+import { profile } from "../data/profile";
+import { url } from "../lib/url";
+
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="wrap site-footer__grid">
+    <p class="site-footer__mark" aria-hidden="true">ab<span>.</span></p>
+    <nav class="site-footer__nav" aria-label="Pied de page">
+      <ul>
+        <li><a href={url("/#projets")}>Projets</a></li>
+        <li><a href={url("/#parcours")}>Parcours</a></li>
+        <li><a href={url("/#competences")}>Compétences</a></li>
+        <li><a href={url("/#contact")}>Contact</a></li>
+        <li><a href={url("/cv/")}>CV imprimable</a></li>
+      </ul>
+      <ul>
+        <li><a href={profile.github} target="_blank" rel="noopener noreferrer">GitHub</a></li>
+        <li><a href={profile.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn</a></li>
+        <li><a href={`mailto:${profile.email}`}>E-mail</a></li>
+      </ul>
+    </nav>
+  </div>
+  <div class="wrap site-footer__bottom">
+    <p>© {year} {profile.name}</p>
+    <a class="link" href="#contenu" data-scroll-top>Haut de page <Icon name="arrow-up" /></a>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    padding-top: clamp(4rem, 8vw, 7rem);
+    border-top: 1px solid var(--line);
+  }
+
+  .site-footer__grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 2rem;
+  }
+
+  .site-footer__mark {
+    font-size: clamp(5rem, 18vw, 16rem);
+    font-weight: 800;
+    font-stretch: 112%;
+    letter-spacing: -0.07em;
+    line-height: 0.75;
+  }
+
+  .site-footer__mark span {
+    color: var(--accent);
+  }
+
+  .site-footer__nav {
+    display: flex;
+    gap: clamp(2rem, 5vw, 5rem);
+    padding-bottom: 0.5rem;
+  }
+
+  .site-footer__nav ul {
+    display: grid;
+    gap: 0.35rem;
+    align-content: start;
+  }
+
+  .site-footer__nav a {
+    font-size: var(--fs-small);
+    text-decoration: none;
+    color: var(--muted);
+    transition: color var(--dur-fast);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .site-footer__nav a:hover {
+      color: var(--ink);
+    }
+  }
+
+  .site-footer__bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 2.5rem;
+    padding-block: 1rem 1.5rem;
+    border-top: 1px solid var(--line);
+    font-size: var(--fs-small);
+    color: var(--muted);
+  }
+
+  @media (max-width: 720px) {
+    .site-footer__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

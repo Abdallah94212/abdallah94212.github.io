@@ -1,0 +1,112 @@
+---
+/* Une ligne du CV (poste, formation, projet, distinction) : intitulé et
+   structure à gauche, date ou technologies à droite, puis le détail.
+   Les tailles sont en em : elles suivent l'échelle de la feuille (cv.astro). */
+interface Props {
+  title: string;
+  place: string;
+  meta: string;
+  href?: string;
+  context?: string;
+  points?: readonly string[];
+}
+
+const { title, place, meta, href, context, points } = Astro.props;
+---
+
+<article class="entry">
+  <div class="entry__head">
+    <h3>
+      {href ? <a href={href}>{title}</a> : title}
+      <span class="entry__place">{`\u00a0· ${place}`}</span>
+    </h3>
+    <p class="entry__meta">{meta}</p>
+  </div>
+  {context && <p class="entry__context">{context}</p>}
+  {
+    points && (
+      <ul class="entry__points">
+        {points.map((point) => (
+          <li>{point}</li>
+        ))}
+      </ul>
+    )
+  }
+</article>
+
+<style>
+  .entry + .entry {
+    margin-top: var(--cv-entry-gap, 0.68em);
+  }
+
+  .entry__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0 1.5em;
+  }
+
+  h3 {
+    font-size: 1.04em;
+    font-weight: 600;
+    font-stretch: 100%;
+    line-height: 1.35;
+    letter-spacing: -0.005em;
+    color: var(--cv-ink);
+    text-wrap: wrap;
+  }
+
+  h3 a {
+    text-decoration: none;
+  }
+
+  .entry__place {
+    font-weight: 400;
+    color: var(--cv-text);
+  }
+
+  .entry__meta {
+    font-family: var(--cv-mono);
+    font-size: 0.8em;
+    font-weight: 500;
+    color: var(--cv-muted);
+    white-space: nowrap;
+  }
+
+  .entry__context {
+    color: var(--cv-text);
+  }
+
+  .entry__points {
+    margin-top: 0.1em;
+    padding-left: 1.05em;
+    list-style: disc;
+    color: var(--cv-text);
+  }
+
+  .entry__points li::marker {
+    color: var(--cv-accent);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    h3 a:hover {
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 0.2em;
+    }
+  }
+
+  /* Sur téléphone, la date passe sous l'intitulé. */
+  @media screen and (max-width: 55.99em) {
+    .entry__head {
+      flex-direction: column;
+    }
+  }
+
+  @media print {
+    .entry {
+      break-inside: avoid;
+    }
+  }
+</style>
