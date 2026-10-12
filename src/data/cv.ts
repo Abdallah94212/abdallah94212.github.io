@@ -1,6 +1,10 @@
-/* Contenu du CV imprimable. Même source que le portfolio (profile.ts et
-   projects.ts), réécrite pour tenir sur une page A4 : chaque ligne doit
-   apporter un fait vérifiable (dates, lieux, technologies, missions). */
+/* Contenu du CV. Même source que le portfolio (profile.ts et projects.ts),
+   réécrite pour tenir sur une page A4 : chaque ligne doit apporter un fait
+   vérifiable (dates, lieux, technologies, missions).
+   Deux présentations s'en servent : la composition artistique affichée sur
+   le site (CvPoster, champs « brief » et logos) et le document professionnel
+   imprimé ou téléchargé en PDF (CvSheet, textes complets). */
+import type { LogoName } from "./logos";
 
 export const cvHeadline = {
   status: "Étudiant en Pré-MSc à Epitech",
@@ -17,6 +21,10 @@ export interface CvEntry {
   when: string;
   context?: string;
   points?: string[];
+  /** Version courte, pour la composition artistique. */
+  brief?: string;
+  /** Technologies, affichées en logos dans la composition artistique. */
+  logos?: LogoName[];
 }
 
 export const cvExperience: CvEntry[] = [
@@ -30,6 +38,9 @@ export const cvExperience: CvEntry[] = [
       "Transformation de données et requêtes SQL Server ; conteneurisation avec Docker.",
       "Participation à chaque étape : besoin, conception, développement, tests et améliorations.",
     ],
+    brief:
+      "Interface de traitement et d’analyse de données pour les clients du cabinet, grands acteurs bancaires dont Natixis. Présent à chaque étape, du besoin aux tests.",
+    logos: ["python", "streamlit", "sqlserver", "docker"],
   },
   {
     title: "Animateur BAFA",
@@ -39,6 +50,7 @@ export const cvExperience: CvEntry[] = [
       "Encadrement d’enfants de 3 à 6 ans en centre de loisirs municipal.",
       "Organisation d’activités ludiques et sportives en équipe ; sécurité et bien-être des enfants.",
     ],
+    brief: "Centre de loisirs municipal, enfants de 3 à 6 ans.",
   },
   {
     title: "Stage d’observation en comptabilité",
@@ -60,6 +72,7 @@ export const cvEducation: CvEntry[] = [
     place: "Epitech Digital School, Paris",
     when: "2024 – 2026",
     context: "MSc (titre RNCP niveau 7), 1re et 2e années : management, digitalisation, marketing.",
+    brief: "MSc, RNCP niveau 7, 1re et 2e années",
   },
   { title: "Formation générale BAFA", place: "Aroéven Paris, Chennevières-sur-Marne", when: "2024" },
   { title: "Baccalauréat général", place: "Lycée Samuel Champlain, Chennevières-sur-Marne", when: "2023" },
@@ -72,24 +85,28 @@ export const cvProjects = [
     subtitle: "Prédictions en Formule 1",
     stack: "Python · scikit-learn · Streamlit",
     text: "Dashboard et simulateur de Grand Prix (2018 à 2023) : résultats croisés avec la météo, deux modèles RandomForest qui estiment victoire et podium. Exploration sous Jupyter Notebook et JupyterLab.",
+    logos: ["python", "scikitlearn", "streamlit", "jupyter"],
   },
   {
     slug: "scoolize",
     subtitle: "Critères d’admission post-bac",
     stack: "Node.js · Express · PostgreSQL · Prisma",
     text: "Projet pédagogique en équipe de trois, en réponse à un appel d’offres du ministère de l’Éducation : audit de Parcoursup, recherche UX et prototype, puis API REST avec authentification JWT et tests Jest.",
+    logos: ["nodedotjs", "express", "postgresql", "prisma"],
   },
   {
     slug: "i2m-site",
     subtitle: "Site vitrine, non publié",
     stack: "Next.js · TypeScript · Tailwind CSS",
     text: "Site d’un cabinet de conseil data pour la finance : pages d’expertise générées à partir de données, articles en MDX, formulaire de contact validé avec Zod.",
+    logos: ["nextdotjs", "typescript", "tailwindcss"],
   },
   {
     slug: "soccer-stat",
     subtitle: "Statistiques de football",
     stack: "Python · pandas · Seaborn · Streamlit",
     text: "Nettoyage d’un jeu de données brut sur les joueurs des cinq grands championnats européens, puis tableau de bord en huit vues : postes, nations, buteurs, ligues, fiche joueur.",
+    logos: ["python", "pandas", "streamlit"],
   },
 ] as const;
 
@@ -100,6 +117,52 @@ export const cvSkills = [
   { title: "Data", items: "SQL, SQL Server, pandas, analyse et visualisation de données, bases en statistiques" },
   { title: "Outils", items: "Git / GitHub, Docker, Jupyter Notebook, JupyterLab, Figma, Framer" },
   { title: "Méthodes", items: "Gestion de projet, besoins utilisateurs, analyse concurrentielle, marketing digital" },
+] as const;
+
+/** Langages et outils en logos, pour la composition artistique. Mêmes
+    compétences que cvSkills ; ce qui n'a pas de logo reste en texte. */
+export const cvToolbox: { title: string; items: { name: string; logo: LogoName; note?: string }[] }[] = [
+  {
+    title: "Langages",
+    items: [
+      { name: "Python", logo: "python" },
+      { name: "JavaScript", logo: "javascript" },
+      { name: "Java", logo: "java" },
+      { name: "HTML", logo: "html5" },
+      { name: "CSS", logo: "css" },
+    ],
+  },
+  {
+    title: "Data et web",
+    items: [
+      { name: "SQL Server", logo: "sqlserver" },
+      { name: "pandas", logo: "pandas" },
+      { name: "Streamlit", logo: "streamlit" },
+      { name: "Jupyter", logo: "jupyter" },
+      { name: "React", logo: "react", note: "notions" },
+    ],
+  },
+  {
+    title: "Outils",
+    items: [
+      { name: "Git", logo: "git" },
+      { name: "GitHub", logo: "github" },
+      { name: "Docker", logo: "docker" },
+      { name: "Figma", logo: "figma" },
+      { name: "Framer", logo: "framer" },
+    ],
+  },
+];
+
+/** Compétences sans logo. */
+export const cvMethods = [
+  "SQL",
+  "Visualisation de données",
+  "Bases en statistiques",
+  "Gestion de projet",
+  "Besoins utilisateurs",
+  "Analyse concurrentielle",
+  "Marketing digital",
 ] as const;
 
 export const cvAward: CvEntry = {

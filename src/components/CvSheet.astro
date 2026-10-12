@@ -1,0 +1,284 @@
+---
+/* Le CV professionnel : une page A4 sobre, en une colonne de lecture.
+   Il n'apparaît qu'à l'impression et dans le PDF à télécharger
+   (npm run cv:pdf) ; à l'écran, c'est la composition artistique qui s'affiche.
+
+   Polices statiques (et non variables) : Chrome les intègre au PDF comme du
+   vrai texte, que les logiciels de recrutement lisent sans difficulté. */
+import "@fontsource/mona-sans/latin-400.css";
+import "@fontsource/mona-sans/latin-600.css";
+import "@fontsource/mona-sans/latin-800.css";
+import "@fontsource/jetbrains-mono/latin-500.css";
+import CvEntry from "./CvEntry.astro";
+import { languages, profile } from "../data/profile";
+import { projectBySlug } from "../data/projects";
+import { cvAward, cvEducation, cvExperience, cvHeadline, cvInterests, cvOtherProjects, cvProjects, cvSkills, cvSummary } from "../data/cv";
+import { fr } from "../lib/fr";
+import { url } from "../lib/url";
+
+const shortUrl = (href: string) => href.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
+const site = Astro.site ? new URL(url("/"), Astro.site).href : undefined;
+const contacts = [
+  { text: profile.email, href: `mailto:${profile.email}` },
+  { text: profile.phone, href: `tel:${profile.phoneHref}` },
+  { text: profile.location },
+  { text: shortUrl(profile.github), href: profile.github },
+  { text: shortUrl(profile.linkedin), href: profile.linkedin },
+  ...(site ? [{ text: shortUrl(site), href: site }] : []),
+];
+
+const projects = cvProjects.map((item) => {
+  const project = projectBySlug(item.slug);
+  if (!project) throw new Error(`Projet introuvable : ${item.slug}`);
+  return { ...item, title: project.title, repo: project.repo };
+});
+
+const skills = [...cvSkills, { title: "Langues", items: languages.map((language) => `${language.name} (${language.level})`).join(", ") }];
+---
+
+<div class="cv-print">
+  <article class="cv" aria-labelledby="cv-name">
+    <header class="cv-head">
+      <div class="cv-head__identity">
+        <h1 class="cv-head__name" id="cv-name">{profile.name}</h1>
+        <p class="cv-head__status">{cvHeadline.status}</p>
+        <p class="cv-head__fields">{fr(cvHeadline.fields)}</p>
+        <p class="cv-head__availability">{cvHeadline.availability}</p>
+      </div>
+      <ul class="cv-head__contact" aria-label="Coordonnées">
+        {contacts.map((contact) => <li>{contact.href ? <a href={contact.href}>{contact.text}</a> : contact.text}</li>)}
+      </ul>
+    </header>
+
+    <section class="cv-section">
+      <h2 id="cv-profil">Profil</h2>
+      <div class="cv-section__body">
+        <p>{fr(cvSummary)}</p>
+      </div>
+    </section>
+
+    <section class="cv-section">
+      <h2 id="cv-experience">Expérience professionnelle</h2>
+      <div class="cv-section__body">
+        {
+          cvExperience.map((entry) => (
+            <CvEntry title={entry.title} place={entry.place} meta={entry.when} context={entry.context && fr(entry.context)} points={entry.points?.map(fr)} />
+          ))
+        }
+      </div>
+    </section>
+
+    <section class="cv-section cv-section--compact">
+      <h2 id="cv-formation">Formation</h2>
+      <div class="cv-section__body">
+        {cvEducation.map((entry) => <CvEntry title={entry.title} place={entry.place} meta={entry.when} context={entry.context && fr(entry.context)} />)}
+      </div>
+    </section>
+
+    <section class="cv-section">
+      <h2 id="cv-projets">Projets</h2>
+      <div class="cv-section__body">
+        {projects.map((project) => <CvEntry title={project.title} href={project.repo} place={project.subtitle} meta={project.stack} context={fr(project.text)} />)}
+        <p class="cv-other"><strong>Autres projets</strong>{"\u00a0· "}{cvOtherProjects}</p>
+      </div>
+    </section>
+
+    <section class="cv-section">
+      <h2 id="cv-competences">Compétences</h2>
+      <dl class="cv-section__body cv-skills">
+        {
+          skills.map((group) => (
+            <div>
+              <dt>{group.title}</dt>
+              <dd>{group.items}</dd>
+            </div>
+          ))
+        }
+      </dl>
+    </section>
+
+    <section class="cv-section">
+      <h2 id="cv-distinction">Distinction</h2>
+      <div class="cv-section__body">
+        <CvEntry title={cvAward.title} place={fr(cvAward.place)} meta={cvAward.when} />
+      </div>
+    </section>
+
+    <section class="cv-section">
+      <h2 id="cv-interets">Centres d’intérêt</h2>
+      <div class="cv-section__body">
+        <p>{fr(cvInterests.join(" · "))}</p>
+      </div>
+    </section>
+  </article>
+</div>
+
+<style>
+  /* À l'écran, ce document n'existe pas : seule l'impression l'affiche. */
+  @media screen {
+    .cv-print {
+      display: none;
+    }
+  }
+
+  /* Une seule composition, en em : 1em = 8,6 pt sur une page A4. */
+  .cv {
+    --cv-ink: #0c0e13;
+    --cv-text: #2a2e37;
+    --cv-muted: #5a606c;
+    --cv-line: #dcdfe5;
+    --cv-accent: #2a45f2;
+    --cv-sans: "Mona Sans", "Helvetica Neue", Arial, sans-serif;
+    --cv-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    --cv-label: 8.6em;
+    --cv-gutter: 1.65em;
+    --cv-space: 0.82em;
+
+    padding: 3.95em 4.95em;
+    background: #fff;
+    color: var(--cv-text);
+    font-family: var(--cv-sans);
+    font-size: 8.6pt;
+    font-weight: 400;
+    line-height: 1.4;
+    font-synthesis: none;
+  }
+
+  .cv :global(a) {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .cv strong {
+    font-weight: 600;
+    color: var(--cv-ink);
+  }
+
+  /* ---------- En-tête ---------- */
+  .cv-head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 1em 2em;
+    padding-bottom: 1em;
+    border-bottom: 0.16em solid var(--cv-ink);
+  }
+
+  .cv-head__name {
+    margin-bottom: 0.18em;
+    color: var(--cv-ink);
+    font-size: 3.1em;
+    font-weight: 800;
+    font-stretch: 100%;
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+  }
+
+  /* Le point bleu, signature du portfolio. Dessiné en CSS pour ne pas
+     s'ajouter au nom dans le texte du PDF. */
+  .cv-head__name::after {
+    content: "";
+    display: inline-block;
+    width: 0.15em;
+    height: 0.15em;
+    margin-left: 0.05em;
+    border-radius: 50%;
+    background: var(--cv-accent);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .cv-head__status,
+  .cv-head__fields {
+    font-size: 1.16em;
+    line-height: 1.32;
+  }
+
+  .cv-head__status {
+    color: var(--cv-ink);
+    font-weight: 600;
+  }
+
+  .cv-head__availability {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 0.55em;
+    margin-top: 0.75em;
+    padding: 0.28em 0.85em 0.3em 0.7em;
+    border: 1px solid var(--cv-accent);
+    border-radius: 999px;
+    color: var(--cv-accent);
+    font-weight: 600;
+  }
+
+  .cv-head__availability::before {
+    content: "";
+    flex: none;
+    margin-top: 0.475em;
+    width: 0.45em;
+    height: 0.45em;
+    border-radius: 50%;
+    background: currentColor;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .cv-head__contact {
+    font-size: 0.96em;
+    line-height: 1.5;
+    text-align: right;
+  }
+
+  /* ---------- Rubriques : intitulé à gauche, contenu à droite ---------- */
+  .cv-section {
+    display: grid;
+    grid-template-columns: var(--cv-label) 1fr;
+    align-items: baseline;
+    column-gap: var(--cv-gutter);
+    padding-block: var(--cv-space);
+  }
+
+  .cv-section + .cv-section {
+    border-top: 1px solid var(--cv-line);
+  }
+
+  .cv-section h2 {
+    color: var(--cv-accent);
+    font-family: var(--cv-mono);
+    font-size: 0.76em;
+    font-weight: 500;
+    font-stretch: 100%;
+    line-height: 1.45;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .cv-section--compact {
+    --cv-entry-gap: 0.4em;
+  }
+
+  .cv-other {
+    margin-top: 0.6em;
+  }
+
+  .cv-skills div {
+    display: grid;
+    grid-template-columns: 7.6em 1fr;
+    gap: 1em;
+  }
+
+  .cv-skills div + div {
+    margin-top: 0.15em;
+  }
+
+  .cv-skills dt {
+    color: var(--cv-ink);
+    font-weight: 600;
+  }
+
+  @media print {
+    .cv :global(.entry) {
+      break-inside: avoid;
+    }
+  }
+</style>

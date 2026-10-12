@@ -26,7 +26,7 @@ Le site est publié sur GitHub Pages, à l’adresse https://abdallah94212.githu
 | --- | --- |
 | `/` | Accueil : présentation, projets, parcours, compétences, centres d’intérêt et contact. |
 | `/projets/<slug>/` | Une étude de cas par projet, générée à partir des données. |
-| `/cv/` | Le CV sur une page A4 : version écran, impression depuis le navigateur et PDF à télécharger. |
+| `/cv/` | Le CV sur une page A4 : composition artistique à l’écran, document professionnel à l’impression et en PDF. |
 | `/404` | Page introuvable. |
 
 ## Technologies, et pourquoi elles sont là
@@ -38,6 +38,9 @@ Le site est publié sur GitHub Pages, à l’adresse https://abdallah94212.githu
 | [Lenis](https://lenis.darkroom.engineering) | Défilement doux | Synchronise la molette avec les animations au scroll pour éviter les saccades. Désactivé si le système demande moins de mouvement. |
 | Mona Sans (variable) | Typographie | Une seule famille avec axes de graisse et de largeur : la largeur sert aux grands titres, la graisse réagit au pointeur sur le nom. Polices auto-hébergées, aucune requête externe. |
 | Phosphor Icons | Icônes | Insérées en SVG au build : pas de JavaScript, pas de requête. |
+| [Simple Icons](https://simpleicons.org) (CC0) et deux logos de [Devicon](https://devicon.dev) (MIT) | Logos des langages et outils du CV | Un seul tracé par logo, coloré par la palette du CV, inséré au build. Java et SQL Server, absents de Simple Icons, sont copiés dans `src/assets/logos/`. |
+| VT323, Silkscreen | Typographie pixel du CV | Police de terminal pour le nom et les titres, police bitmap pour les petites étiquettes. Auto-hébergées, chargées seulement sur `/cv/`. |
+| [qrcode](https://github.com/soldair/node-qrcode) (build uniquement) | QR code vers le portfolio, dans le CV | Calculé au build et dessiné case par case en SVG : aucune image, aucun script envoyé. |
 | View Transitions API | Passage d’une fiche projet à son étude de cas | Natif dans le navigateur : la capture et le titre se transforment d’une page à l’autre. Les navigateurs sans support changent simplement de page. |
 | [Playwright](https://playwright.dev) (développement uniquement) | Génère le PDF du CV | Le PDF sort du même rendu d’impression que la page : une seule source, et un garde-fou qui refuse un CV de plus d’une page. Rien n’est envoyé au navigateur des visiteurs. |
 
@@ -50,7 +53,8 @@ src/
 ├── data/
 │   ├── profile.ts        Identité, parcours, compétences, langues, centres d’intérêt
 │   ├── projects.ts       Projets, études de cas, captures et autres dépôts
-│   └── cv.ts             Textes du CV (une page A4)
+│   ├── cv.ts             Textes du CV (une page A4), versions courtes et logos
+│   └── logos.ts          Logos des langages et outils (Simple Icons, Devicon)
 ├── assets/projects/      Captures des projets (sources PNG, optimisées au build)
 ├── layouts/
 │   └── BaseLayout.astro  <head>, SEO, thème, en-tête, pied de page, script principal
@@ -64,7 +68,10 @@ src/
 │   ├── Interests.astro
 │   ├── Contact.astro     Copie de l’adresse et formulaire
 │   ├── Shot.astro        Capture d’écran encadrée (ordinateur ou téléphone)
-│   ├── CvEntry.astro     Une ligne du CV : poste, formation, projet
+│   ├── CvPoster.astro    CV artistique : l’affiche A4 affichée à l’écran
+│   ├── CvSheet.astro     CV professionnel : la page imprimée et le PDF
+│   ├── CvEntry.astro     Une ligne du CV professionnel : poste, formation, projet
+│   ├── Logo.astro        Un logo de langage ou d’outil
 │   ├── MotionScript.astro  Ajoute la couche de mouvement à une page
 │   ├── Icon.astro, SiteHeader.astro, SiteFooter.astro
 ├── pages/                index, cv, 404 et projets/[slug]
@@ -85,14 +92,17 @@ scripts/cv-pdf.mjs        Génère le PDF du CV avec Chrome et vérifie qu’il 
   2. les importer en haut de `src/data/projects.ts`, puis ajouter une entrée dans `projects` (titre, pitch, technologies, teinte, captures, blocs de l’étude de cas) ;
   3. la fiche d’accueil et la page `/projets/<slug>/` sont générées automatiquement.
 - **Couleurs et typographie** : variables en tête de `src/styles/global.css` (thème clair et thème sombre).
-- **CV** : textes dans `src/data/cv.ts` (le titre et le dépôt des projets viennent de `projects.ts`). Après chaque modification, lancer `npm run cv:pdf` pour régénérer le PDF à télécharger ; le script s’arrête en erreur si le CV dépasse une page.
+- **CV** : textes dans `src/data/cv.ts` (le titre et le dépôt des projets viennent de `projects.ts`). Les champs `brief` et `logos` ne servent qu’à la version artistique. Après chaque modification, lancer `npm run cv:pdf` pour régénérer le PDF à télécharger ; le script s’arrête en erreur si le CV dépasse une page.
 
 ## Le CV
 
-- **Une seule composition** : la feuille est dessinée en `em`, sur la base de 8,6 pt pour une page A4. À l’écran, sa taille suit la largeur de la fenêtre (mêmes proportions qu’à l’impression) ; sur téléphone et tablette, elle se recompose en une colonne lisible.
-- **Impression** : `@page { size: A4; margin: 0 }` avec des marges intégrées à la feuille. Le navigateur n’ajoute ni URL ni date, et le CV occupe environ 285 mm sur 297 (mesuré dans Chrome et WebKit). Les règles de mise en page mobile sont limitées à l’écran (`@media screen`) : la page imprimée ne peut plus basculer en une colonne.
+Deux présentations du même contenu, sur la même page `/cv/` : le média décide laquelle s’affiche.
+
+- **À l’écran, une affiche A4** (`CvPoster.astro`) : fiche profil d’ordinateur des années 2000, aplat bleu électrique, fenêtres à barre de titre, typographie pixel, logos des outils en icônes de bureau. Toute la composition est dessinée en millimètres de feuille (`--u = 100cqi / 210`) : elle garde exactement ses proportions, du téléphone au grand écran. Les graphiques sont calculés à partir des données : le radar compte les projets où chaque outil a servi (`profile.ts`), la frise suit `cvEducation`, le QR code pointe vers le portfolio.
+- **La visionneuse** : sur ordinateur, la feuille tient entière dans la fenêtre. « Agrandir », ou un clic sur la feuille, passe en lecture en gardant le point cliqué sous le pointeur ; Échap revient à l’ensemble. Sur téléphone, la lecture élargit la feuille, qui se parcourt dans les deux sens.
+- **À l’impression et en PDF, un document professionnel** (`CvSheet.astro`) : une colonne de lecture, rubriques standard. Il est masqué à l’écran ; l’affiche est masquée à l’impression. `@page { size: A4; margin: 0 }`, marges intégrées à la feuille : le navigateur n’ajoute ni URL ni date.
 - **Logiciels de recrutement (ATS)** : vrai texte dans le PDF (polices statiques Mona Sans et JetBrains Mono, intégrées en TrueType et non en Type 3 comme les polices variables), intitulés de rubriques standard, ordre de lecture identique à l’ordre visuel, dates sur la ligne de l’intitulé, liens écrits en clair, aucune information dans une image. Le point bleu du nom est dessiné en CSS : il ne s’ajoute pas au nom extrait. Le PDF est balisé (structure, langue `fr`).
-- **PDF à télécharger** : `npm run cv:pdf` lance le build, sert le site, l’imprime avec Google Chrome (ou le Chromium de Playwright) et écrit `public/CV-Abdallah-Borji.pdf`.
+- **PDF à télécharger** : `npm run cv:pdf` lance le build, sert le site, l’imprime avec Google Chrome (ou le Chromium de Playwright) en média `print` et écrit `public/CV-Abdallah-Borji.pdf`.
 
 ## Le mouvement, et pourquoi
 

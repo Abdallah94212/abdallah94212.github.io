@@ -1,0 +1,1313 @@
+---
+/* Le CV en version artistique : une affiche au format A4, affichée sur le
+   site. Une fiche profil d'ordinateur des années 2000 : aplat bleu électrique,
+   fenêtres à barre de titre, typographie pixel, logos des outils en icônes
+   de bureau. Tout est composé en millimètres de feuille (--u = 1 mm), donc la
+   composition garde exactement ses proportions à toutes les tailles.
+
+   Les graphiques sont calculés à partir des données, jamais dessinés à la
+   main : radar (projets où chaque outil a servi, d'après profile.ts),
+   frise (formation), QR code (adresse du portfolio).
+   À l'impression et dans le PDF, c'est CvSheet qui prend le relais. */
+import "@fontsource/vt323/latin-400.css";
+import "@fontsource/silkscreen/latin-400.css";
+import "@fontsource/silkscreen/latin-700.css";
+import "@fontsource/jetbrains-mono/latin-400.css";
+import "@fontsource/jetbrains-mono/latin-500.css";
+import QRCode from "qrcode";
+import Logo from "./Logo.astro";
+import { languages, profile, skillGroups } from "../data/profile";
+import { projectBySlug } from "../data/projects";
+import { cvAward, cvEducation, cvExperience, cvHeadline, cvInterests, cvMethods, cvProjects, cvSummary, cvToolbox } from "../data/cv";
+import { fr } from "../lib/fr";
+import { projectUrl, url } from "../lib/url";
+
+const site = Astro.site ? new URL(url("/"), Astro.site).href : undefined;
+const shortUrl = (href: string) => href.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
+
+const projects = cvProjects.map((item, index) => {
+  const project = projectBySlug(item.slug);
+  if (!project) throw new Error(`Projet introuvable : ${item.slug}`);
+  return { ...item, index: String(index + 1).padStart(2, "0"), title: project.title, href: projectUrl(item.slug) };
+});
+
+/* ---------- Fiche d'identité ---------- */
+const fiche = [
+  { label: "Statut", value: cvHeadline.status.replace(/ à .*$/, "") },
+  { label: "École", value: cvEducation[0].place },
+  { label: "Domaines", value: cvHeadline.fields },
+  { label: "Basé à", value: profile.location },
+  { label: "Distinction", value: `${cvAward.title}, ${cvAward.when}` },
+];
+
+/* ---------- Langues : niveau du CECRL sur six cases (A1 à C2) ---------- */
+const cefr = ["A1", "A2", "B1", "B2", "C1", "C2"];
+const spoken = languages.map((language) => ({ ...language, rank: cefr.indexOf(language.level) + 1 }));
+
+/* ---------- Radar : projets et expériences où chaque outil a servi ---------- */
+const radarAxes = [
+  { skill: "Python", label: "Python" },
+  { skill: "Streamlit", label: "Streamlit" },
+  { skill: "Visualisation", label: "Dataviz" },
+  { skill: "SQL & SQL Server", label: "SQL" },
+  { skill: "JavaScript", label: "JavaScript" },
+  { skill: "Docker", label: "Docker" },
+];
+const allSkills = skillGroups.flatMap((group) => group.skills);
+const radar = radarAxes.map(({ skill, label }, i) => {
+  const found = allSkills.find((item) => item.name === skill);
+  if (!found) throw new Error(`Compétence introuvable : ${skill}`);
+  const angle = ((-90 + i * 60) * Math.PI) / 180;
+  return { label, value: found.usedIn.length, cos: Math.cos(angle), sin: Math.sin(angle) };
+});
+const radarMax = Math.max(...radar.map((axis) => axis.value));
+const point = (r: number, axis: (typeof radar)[number]) => `${(r * axis.cos).toFixed(3)},${(r * axis.sin).toFixed(3)}`;
+const radarRings = Array.from({ length: radarMax }, (_, k) => radar.map((axis) => point((k + 1) / radarMax, axis)).join(" "));
+const radarShape = radar.map((axis) => point(axis.value / radarMax, axis)).join(" ");
+
+/* ---------- Trame déformée, comme une surface vue en perspective ---------- */
+function warpedMesh(cols: number, rows: number, bulge: number) {
+  const at = (u: number, v: number) => {
+    const x = 0.5 + (u - 0.5) * (1 + bulge * Math.sin(Math.PI * v));
+    const y = 0.5 + (v - 0.5) * (1 + bulge * 0.6 * Math.sin(Math.PI * u));
+    return `${(x * 100).toFixed(2)} ${(y * 100).toFixed(2)}`;
+  };
+  const steps = 24;
+  const line = (fn: (t: number) => string) => "M" + Array.from({ length: steps + 1 }, (_, s) => fn(s / steps)).join("L");
+  const vertical = Array.from({ length: cols + 1 }, (_, c) => line((t) => at(c / cols, t)));
+  const horizontal = Array.from({ length: rows + 1 }, (_, r) => line((t) => at(t, r / rows)));
+  return [...vertical, ...horizontal].join("");
+}
+const mesh = warpedMesh(14, 10, 0.22);
+
+/* ---------- Frise de formation, de la plus ancienne à la recherche en cours ---------- */
+const timeline = [
+  ...[...cvEducation].reverse().map((entry) => ({ when: entry.when, title: entry.title, place: entry.place.split(",")[0], brief: entry.brief, future: false })),
+  { when: "2027", title: "Alternance", place: "Janvier – août 2027", brief: undefined, future: true },
+];
+
+/* ---------- QR code vers le portfolio (une case = un module) ---------- */
+const qr = site ? QRCode.create(site, { errorCorrectionLevel: "M" }) : undefined;
+const qrSize = qr?.modules.size ?? 0;
+let qrPath = "";
+for (let y = 0; y < qrSize; y++) {
+  for (let x = 0; x < qrSize; x++) if (qr?.modules.data[y * qrSize + x]) qrPath += `M${x} ${y}h1v1h-1z`;
+}
+
+/* ---------- Curseur pixel (B : contour, W : remplissage) ---------- */
+const cursor = [
+  "B...........",
+  "BB..........",
+  "BWB.........",
+  "BWWB........",
+  "BWWWB.......",
+  "BWWWWB......",
+  "BWWWWWB.....",
+  "BWWWWWWB....",
+  "BWWWWWWWB...",
+  "BWWWWWWWWB..",
+  "BWWWWWWWWWB.",
+  "BWWWWWWBBBBB",
+  "BWWWBWWB....",
+  "BWWBBWWB....",
+  "BWB..BWWB...",
+  "BB...BWWB...",
+  "B.....BWWB..",
+  "......BWWB..",
+  ".......BB...",
+];
+const cursorPath = (key: string) =>
+  cursor.flatMap((row, y) => [...row].map((cell, x) => (cell === key ? `M${x} ${y}h1v1h-1z` : ""))).join("");
+
+/* Étoile à quatre branches, en coordonnées -1..1. */
+const sparkle = "M0 -1C.1 -.1 .1 -.1 1 0C.1 .1 .1 .1 0 1C-.1 .1 -.1 .1 -1 0C-.1 -.1 -.1 -.1 0 -1Z";
+---
+
+<article class="poster" aria-labelledby="poster-name">
+  <svg class="poster__mesh" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+    <path d={mesh}></path>
+  </svg>
+
+  <!-- Barre système -->
+  <div class="p-bar" aria-hidden="true">
+    <span class="p-bar__mark">ab<i>.</i></span>
+    <span>Curriculum vitae</span>
+    <span class="p-bar__sep">2026</span>
+    <span class="p-bar__slashes">/ / / / / / / / /</span>
+  </div>
+
+  <!-- Nom : le prénom en bleu sur la bande blanche, le nom en blanc sur le bleu -->
+  <div class="p-band" aria-hidden="true"></div>
+  <h1 class="p-name" id="poster-name">
+    <span class="p-name__first">{profile.firstName}</span>
+    <span class="p-name__last">{profile.lastName}</span>
+  </h1>
+
+  <p class="p-seek">
+    <span class="p-seek__label">Recherche</span>
+    <span class="p-seek__what">Alternance</span>
+    <span class="p-seek__when">Janv. – août 2027</span>
+  </p>
+
+  <section class="win p-fiche" aria-labelledby="p-fiche-title">
+    <header class="win__bar"><h2 id="p-fiche-title">Fiche</h2><span class="win__ctrl" aria-hidden="true"><i></i><i></i><i></i></span></header>
+    <dl class="fiche">
+      {
+        fiche.map((row) => (
+          <div>
+            <dt>{row.label}</dt>
+            <dd>{fr(row.value)}</dd>
+          </div>
+        ))
+      }
+    </dl>
+  </section>
+
+  <section class="win p-profile" aria-labelledby="p-profile-title">
+    <header class="win__bar"><h2 id="p-profile-title">Profil</h2><span class="win__ctrl" aria-hidden="true"><i></i><i></i><i></i></span></header>
+    <div class="win__body">
+      <p class="profile-text">{fr(cvSummary)}</p>
+    </div>
+  </section>
+
+  <section class="win win--night p-radar" aria-labelledby="p-radar-title">
+    <header class="win__bar"><h2 id="p-radar-title">Outils × projets</h2><span class="win__ctrl" aria-hidden="true"><i></i><i></i><i></i></span></header>
+    <figure class="radar">
+      <svg class="radar__mesh" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d={mesh}></path></svg>
+      <svg class="radar__chart" viewBox="-1.85 -1.3 3.7 2.6" role="img" aria-labelledby="p-radar-desc" focusable="false">
+        <defs>
+          <filter id="radar-glow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="0.04" result="blur" />
+            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+        </defs>
+        {radarRings.map((ring) => <polygon class="radar__ring" points={ring} />)}
+        {radar.map((axis) => <line class="radar__axis" x1="0" y1="0" x2={axis.cos.toFixed(3)} y2={axis.sin.toFixed(3)} />)}
+        <polygon class="radar__shape" points={radarShape} filter="url(#radar-glow)" />
+        {radar.map((axis) => <circle class="radar__dot" cx={((axis.value / radarMax) * axis.cos).toFixed(3)} cy={((axis.value / radarMax) * axis.sin).toFixed(3)} r="0.045" />)}
+        {
+          radar.map((axis) => (
+            <text
+              class="radar__label"
+              x={(1.2 * axis.cos).toFixed(3)}
+              y={(1.2 * axis.sin + 0.06).toFixed(3)}
+              text-anchor={Math.abs(axis.cos) < 0.2 ? "middle" : axis.cos > 0 ? "start" : "end"}
+            >
+              {axis.label}
+              <tspan class="radar__value">{` ${axis.value}`}</tspan>
+            </text>
+          ))
+        }
+      </svg>
+      <figcaption id="p-radar-desc">
+        Nombre de projets et d’expériences où chaque outil a servi : {radar.map((axis) => `${axis.label} ${axis.value}`).join(", ")}.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="win p-side" aria-labelledby="p-lang-title">
+    <header class="win__bar"><h2 id="p-lang-title">Langues</h2><span class="win__ctrl" aria-hidden="true"><i></i><i></i><i></i></span></header>
+    <div class="win__body">
+      <ul class="langs">
+        {
+          spoken.map((language) => (
+            <li>
+              <span class="langs__name">{language.name}</span>
+              <span class="langs__level">{language.level}</span>
+              <span class="langs__bar" aria-hidden="true">
+                {cefr.map((_, i) => (
+                  <i class:list={{ on: i < language.rank }} />
+                ))}
+              </span>
+            </li>
+          ))
+        }
+      </ul>
+      <h2 class="side__title" id="p-hobbies-title">Hors écran</h2>
+      <ul class="hobbies" aria-labelledby="p-hobbies-title">
+        {
+          cvInterests.map((item) => (
+            <li>
+              <svg viewBox="-1 -1 2 2" aria-hidden="true" focusable="false"><path d={sparkle} /></svg>
+              {fr(item)}
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <section class="win p-exp" aria-labelledby="p-exp-title">
+    <header class="win__bar"><h2 id="p-exp-title">Expérience</h2><span class="win__ctrl" aria-hidden="true"><i></i><i></i><i></i></span></header>
+    <div class="win__body entries">
+      {
+        cvExperience.map((entry, i) => (
+          <article class:list={["entry", { "entry--lead": i === 0 }]}>
+            <p class="entry__when">{entry.when}</p>
+            <h3 class="entry__title">{entry.title}</h3>
+            <p class="entry__place">{entry.place}</p>
+            {entry.brief && <p class="entry__brief">{fr(entry.brief)}</p>}
+            {entry.logos && (
+              <ul class="stack" aria-label="Technologies">
+                {entry.logos.map((logo) => (
+                  <li>
+                    <Logo name={logo} labelled />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </article>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="win p-proj" aria-labelledby="p-proj-title">
+    <header class="win__bar"><h2 id="p-proj-title">Projets</h2><span class="win__ctrl" aria-hidden="true"><i></i><i></i><i></i></span></header>
+    <div class="win__body projects">
+      {
+        projects.map((project) => (
+          <article class="project">
+            <span class="project__index" aria-hidden="true">{project.index}</span>
+            <h3 class="project__title">
+              <a href={project.href}>{project.title}</a>
+            </h3>
+            <p class="project__subtitle">{project.subtitle}</p>
+            <ul class="stack" aria-label="Technologies">
+              {project.logos.map((logo) => (
+                <li>
+                  <Logo name={logo} labelled />
+                </li>
+              ))}
+            </ul>
+          </article>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="win p-edu" aria-labelledby="p-edu-title">
+    <header class="win__bar"><h2 id="p-edu-title">Formation</h2><span class="win__ctrl" aria-hidden="true"><i></i><i></i><i></i></span></header>
+    <ol class="timeline">
+      {
+        timeline.map((step, i) => (
+          <li class:list={["step", i % 2 ? "step--below" : "step--above", { "step--future": step.future }]} style={`--i: ${i}`}>
+            <span class="step__when">{step.when}</span>
+            <span class="step__title">{step.title}</span>
+            <span class="step__place">{step.place}</span>
+            {step.brief && <span class="step__brief">{fr(step.brief)}</span>}
+          </li>
+        ))
+      }
+    </ol>
+  </section>
+
+  <section class="win p-tools" aria-labelledby="p-tools-title">
+    <header class="win__bar"><h2 id="p-tools-title">Langages et outils</h2><span class="win__ctrl" aria-hidden="true"><i></i><i></i><i></i></span></header>
+    <div class="win__body toolbox">
+      {
+        cvToolbox.map((group) => (
+          <div class="toolbox__row">
+            <h3 class="toolbox__title">{group.title}</h3>
+            <ul class="toolbox__icons">
+              {group.items.map((item) => (
+                <li class="tool">
+                  <span class="tool__tile">
+                    <Logo name={item.logo} />
+                  </span>
+                  <span class="tool__name">
+                    {item.name}
+                    {item.note && <small>{item.note}</small>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      }
+      <p class="toolbox__methods"><span>Aussi</span>{fr(cvMethods.join(" · "))}</p>
+    </div>
+  </section>
+
+  <section class="win p-contact" aria-labelledby="p-contact-title">
+    <header class="win__bar"><h2 id="p-contact-title">Contact</h2><span class="win__ctrl" aria-hidden="true"><i></i><i></i><i></i></span></header>
+    <div class="win__body contact">
+      <ul class="contact__list">
+        <li><a href={`mailto:${profile.email}`}>{profile.email}</a></li>
+        <li><a href={`tel:${profile.phoneHref}`}>{profile.phone}</a></li>
+        <li><a href={profile.github}>{shortUrl(profile.github).replace("github.com/", "github/")}</a></li>
+        <li><a href={profile.linkedin}>linkedin/abdallah-borji</a></li>
+        <li>{profile.location}</li>
+      </ul>
+      {
+        site && (
+          <a class="contact__qr" href={site}>
+            <svg viewBox={`-2 -2 ${qrSize + 4} ${qrSize + 4}`} shape-rendering="crispEdges" aria-hidden="true" focusable="false">
+              <rect x="-2" y="-2" width={qrSize + 4} height={qrSize + 4} class="qr__bg" />
+              <path d={qrPath} class="qr__dots" />
+            </svg>
+            <span>Portfolio</span>
+            <span class="visually-hidden"> : {shortUrl(site)}</span>
+            <svg class="contact__cursor" viewBox="0 0 12 19" shape-rendering="crispEdges" aria-hidden="true" focusable="false">
+              <path d={cursorPath("W")} class="cursor__fill" />
+              <path d={cursorPath("B")} class="cursor__line" />
+            </svg>
+          </a>
+        )
+      }
+    </div>
+  </section>
+
+  <div class="p-foot" aria-hidden="true">
+    <span class="p-bar__slashes">/ / / / / /</span>
+    <span>{site ? shortUrl(site) : profile.name}</span>
+    <svg viewBox="-1 -1 2 2" focusable="false"><path d={sparkle} /></svg>
+  </div>
+
+  <svg class="p-sparkles" viewBox="0 0 210 297" aria-hidden="true" focusable="false">
+    <path d={sparkle} transform="translate(97.5 57) scale(3.2)" />
+    <path d={sparkle} transform="translate(102 66.5) scale(1.5)" />
+  </svg>
+</article>
+
+<style>
+  /* ---------- La feuille : 210 × 297 « millimètres » ---------- */
+  .poster {
+    --u: calc(100cqi / 210);
+    --blue: #1b19e6;
+    --blue-deep: #1210b8;
+    --night: #0d0c2b;
+    --white: #f6f6ff;
+    --lilac: #c4c2ff;
+    --rule: rgb(196 194 255 / 62%);
+    --line: max(1px, calc(0.26 * var(--u)));
+    --pixel: "VT323", ui-monospace, monospace;
+    --micro: "Silkscreen", ui-monospace, monospace;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    --t-micro: calc(1.85 * var(--u));
+    --t-body: calc(2.2 * var(--u));
+    --t-value: calc(3.5 * var(--u));
+    --t-title: calc(4.4 * var(--u));
+
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-template-rows:
+      calc(5 * var(--u)) calc(30 * var(--u)) calc(30 * var(--u)) calc(46 * var(--u))
+      calc(60 * var(--u)) calc(38 * var(--u)) calc(46 * var(--u)) calc(4 * var(--u));
+    align-content: space-between;
+    column-gap: calc(3 * var(--u));
+    width: 100%;
+    aspect-ratio: 210 / 297;
+    padding: calc(8 * var(--u));
+    overflow: hidden;
+    background: var(--blue);
+    color: var(--white);
+    font-family: var(--mono);
+    font-size: var(--t-body);
+    font-weight: 400;
+    line-height: 1.38;
+    font-synthesis: none;
+    font-kerning: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :where(.poster) :where(h1, h2, h3, p, ul, ol, dl, dd, figure) {
+    margin: 0;
+    padding: 0;
+    font: inherit;
+    letter-spacing: normal;
+    list-style: none;
+  }
+
+  .poster a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .poster ::selection {
+    background: var(--white);
+    color: var(--blue);
+  }
+
+  .poster :global(svg) {
+    display: block;
+  }
+
+  /* Trame déformée en fond de feuille, visible dans les marges et les interstices. */
+  .poster__mesh {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    fill: none;
+    stroke: rgb(255 255 255 / 9%);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+    pointer-events: none;
+  }
+
+  .poster__mesh path,
+  .radar__mesh path {
+    vector-effect: non-scaling-stroke;
+  }
+
+  /* ---------- Barre système ---------- */
+  .p-bar,
+  .p-foot {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: calc(4 * var(--u));
+    font-family: var(--micro);
+    font-size: var(--t-micro);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--lilac);
+  }
+
+  .p-bar {
+    grid-row: 1;
+  }
+
+  .p-bar__mark {
+    font-family: var(--pixel);
+    font-size: calc(5 * var(--u));
+    line-height: 1;
+    text-transform: none;
+    color: var(--white);
+  }
+
+  .p-bar__mark i {
+    font-style: normal;
+    color: var(--lilac);
+  }
+
+  .p-bar__slashes {
+    margin-left: auto;
+    font-family: var(--pixel);
+    font-size: calc(4.2 * var(--u));
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+  }
+
+  .p-foot {
+    grid-row: 8;
+    position: relative;
+  }
+
+  .p-foot .p-bar__slashes {
+    margin-left: 0;
+  }
+
+  .p-foot svg {
+    width: calc(3 * var(--u));
+    margin-left: auto;
+    fill: var(--white);
+  }
+
+  /* ---------- Nom ---------- */
+  .p-band {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    margin-inline: calc(-8 * var(--u));
+    background: var(--white);
+  }
+
+  .p-name {
+    grid-column: 1 / -1;
+    grid-row: 2 / 4;
+    display: grid;
+    grid-template-rows: subgrid;
+    font-family: var(--pixel);
+    font-size: calc(41 * var(--u));
+    font-weight: 400;
+    line-height: 1;
+    text-transform: uppercase;
+    pointer-events: none;
+  }
+
+  .p-name > span {
+    align-self: end;
+    margin-left: calc(-1.2 * var(--u));
+    margin-bottom: calc(-6.6 * var(--u));
+    pointer-events: auto;
+  }
+
+  /* Le prénom, rempli de lignes de balayage comme un écran cathodique. */
+  .p-name__first {
+    color: var(--blue);
+    background: repeating-linear-gradient(to bottom, var(--blue) 0 calc(1.55 * var(--u)), var(--blue-deep) calc(1.55 * var(--u)) calc(2.05 * var(--u)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .p-name__last {
+    color: var(--white);
+    text-shadow: calc(1.2 * var(--u)) calc(1.2 * var(--u)) 0 rgb(13 12 43 / 55%);
+  }
+
+  /* L'alternance recherchée, à la place du numéro d'identifiant. */
+  .p-seek {
+    grid-column: 10 / -1;
+    grid-row: 2;
+    align-self: center;
+    display: grid;
+    justify-items: end;
+    gap: calc(0.6 * var(--u));
+    color: var(--blue);
+    text-align: right;
+  }
+
+  .p-seek__label {
+    font-family: var(--micro);
+    font-size: var(--t-micro);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .p-seek__what {
+    font-family: var(--pixel);
+    font-size: calc(7.4 * var(--u));
+    line-height: 0.8;
+    text-transform: uppercase;
+  }
+
+  .p-seek__when {
+    padding: calc(0.5 * var(--u)) calc(1.4 * var(--u)) calc(0.3 * var(--u));
+    background: var(--blue);
+    color: var(--white);
+    font-family: var(--pixel);
+    font-size: calc(4.2 * var(--u));
+    line-height: 1;
+  }
+
+  /* ---------- Fenêtres ---------- */
+  .win {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border: var(--line) solid var(--rule);
+    background: var(--blue);
+    box-shadow: calc(1.2 * var(--u)) calc(1.2 * var(--u)) 0 rgb(13 12 43 / 55%);
+  }
+
+  .win__bar {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: calc(5 * var(--u));
+    padding-inline: calc(2 * var(--u)) calc(1.6 * var(--u));
+    background: var(--white);
+    color: var(--blue);
+  }
+
+  .win__bar h2,
+  .side__title {
+    font-family: var(--micro);
+    font-size: calc(2.05 * var(--u));
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .win__ctrl {
+    display: flex;
+    gap: calc(0.9 * var(--u));
+  }
+
+  .win__ctrl i {
+    width: calc(1.7 * var(--u));
+    height: calc(1.7 * var(--u));
+    border: var(--line) solid currentColor;
+  }
+
+  .win__ctrl i:last-child {
+    background: currentColor;
+  }
+
+  .win__body {
+    flex: 1;
+    min-height: 0;
+    padding: calc(2.6 * var(--u)) calc(3 * var(--u));
+  }
+
+  .win--night {
+    background: var(--night);
+  }
+
+  /* ---------- Fiche ---------- */
+  .p-fiche {
+    grid-column: 7 / -1;
+    grid-row: 3;
+  }
+
+  .fiche {
+    flex: 1;
+    display: grid;
+    align-content: space-evenly;
+    padding: calc(0.6 * var(--u)) calc(3 * var(--u));
+  }
+
+  .fiche div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: calc(3 * var(--u));
+    padding-block: calc(0.3 * var(--u));
+    border-bottom: var(--line) dotted var(--rule);
+  }
+
+  .fiche div:last-child {
+    border-bottom: 0;
+  }
+
+  .fiche dt {
+    flex: none;
+    font-family: var(--micro);
+    font-size: var(--t-micro);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--lilac);
+  }
+
+  .fiche dd {
+    font-family: var(--pixel);
+    font-size: var(--t-value);
+    line-height: 1;
+    text-align: right;
+  }
+
+  /* ---------- Profil ---------- */
+  .p-profile {
+    grid-column: 1 / 6;
+    grid-row: 4;
+  }
+
+  /* Safari et Chrome ne coupent pas les lignes au même endroit : le texte
+     est centré dans sa fenêtre, avec de la marge pour une ligne de plus. */
+  .p-profile .win__body {
+    display: flex;
+    align-items: center;
+    padding-block: calc(2 * var(--u));
+  }
+
+  .profile-text {
+    font-family: var(--pixel);
+    font-size: calc(3.95 * var(--u));
+    line-height: 1.12;
+    text-align: justify;
+    hyphens: manual;
+  }
+
+  /* ---------- Radar ---------- */
+  .p-radar {
+    grid-column: 6 / 10;
+    grid-row: 4;
+  }
+
+  .radar {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: calc(1.4 * var(--u)) calc(2 * var(--u)) calc(1.8 * var(--u));
+    overflow: hidden;
+  }
+
+  .radar__mesh {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    fill: none;
+    stroke: rgb(196 194 255 / 16%);
+  }
+
+  .radar__chart {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    overflow: visible;
+  }
+
+  .radar__ring,
+  .radar__axis {
+    fill: none;
+    stroke: rgb(196 194 255 / 45%);
+    stroke-width: 0.012;
+  }
+
+  .radar__shape {
+    fill: rgb(70 66 255 / 72%);
+    stroke: var(--lilac);
+    stroke-width: 0.022;
+  }
+
+  .radar__dot {
+    fill: var(--white);
+  }
+
+  .radar__label {
+    fill: var(--lilac);
+    font-family: var(--micro);
+    font-size: 0.155px;
+    letter-spacing: 0.01px;
+    text-transform: uppercase;
+  }
+
+  .radar__value {
+    fill: var(--white);
+    font-family: var(--pixel);
+    font-size: 0.26px;
+  }
+
+  .radar figcaption {
+    position: relative;
+    font-size: calc(1.75 * var(--u));
+    line-height: 1.3;
+    color: var(--lilac);
+  }
+
+  /* ---------- Langues et loisirs ---------- */
+  .p-side {
+    grid-column: 10 / -1;
+    grid-row: 4;
+  }
+
+  .langs {
+    display: grid;
+    gap: calc(1.4 * var(--u));
+  }
+
+  .langs li {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    row-gap: calc(0.6 * var(--u));
+  }
+
+  .langs__name {
+    font-family: var(--pixel);
+    font-size: var(--t-value);
+    line-height: 1;
+  }
+
+  .langs__level {
+    font-family: var(--pixel);
+    font-size: var(--t-value);
+    line-height: 1;
+    color: var(--lilac);
+  }
+
+  .langs__bar {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: calc(0.7 * var(--u));
+  }
+
+  .langs__bar i {
+    width: calc(2.4 * var(--u));
+    height: calc(1.6 * var(--u));
+    border: var(--line) solid var(--lilac);
+  }
+
+  .langs__bar i.on {
+    background: var(--white);
+    border-color: var(--white);
+  }
+
+  .side__title {
+    margin: calc(3 * var(--u)) 0 calc(1.4 * var(--u));
+    padding-top: calc(2 * var(--u));
+    border-top: var(--line) dotted var(--rule);
+    font-size: calc(1.85 * var(--u));
+    color: var(--lilac);
+  }
+
+  .hobbies {
+    display: grid;
+    gap: calc(0.9 * var(--u));
+    line-height: 1.25;
+  }
+
+  .hobbies li {
+    display: grid;
+    grid-template-columns: calc(2.2 * var(--u)) 1fr;
+    gap: calc(1.2 * var(--u));
+  }
+
+  .hobbies svg {
+    width: calc(2.2 * var(--u));
+    margin-top: calc(0.2 * var(--u));
+    fill: var(--lilac);
+  }
+
+  /* ---------- Expérience ---------- */
+  .p-exp {
+    grid-column: 1 / 7;
+    grid-row: 5;
+  }
+
+  .entries {
+    display: grid;
+    align-content: space-between;
+    gap: calc(1.8 * var(--u));
+    padding-block: calc(2.2 * var(--u));
+  }
+
+  .entry {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: calc(2 * var(--u));
+  }
+
+  .entry + .entry {
+    padding-top: calc(1.8 * var(--u));
+    border-top: var(--line) dotted var(--rule);
+  }
+
+  .entry__when {
+    grid-column: 2;
+    grid-row: 1;
+    font-family: var(--pixel);
+    font-size: calc(3.3 * var(--u));
+    line-height: 1.1;
+    color: var(--lilac);
+    white-space: nowrap;
+  }
+
+  .entry__title {
+    grid-column: 1;
+    grid-row: 1;
+    font-family: var(--pixel);
+    font-size: var(--t-title);
+    line-height: 0.95;
+  }
+
+  .entry--lead .entry__title {
+    font-size: calc(5.2 * var(--u));
+  }
+
+  .entry__place {
+    grid-column: 1 / -1;
+    margin-top: calc(0.2 * var(--u));
+    font-weight: 500;
+    color: var(--lilac);
+  }
+
+  .entry__brief {
+    grid-column: 1 / -1;
+    margin-top: calc(0.5 * var(--u));
+    line-height: 1.3;
+  }
+
+  .entry .stack {
+    grid-column: 1 / -1;
+  }
+
+  /* Logos des technologies, sur une ligne. */
+  .stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: calc(1.2 * var(--u));
+    margin-top: calc(1.3 * var(--u));
+  }
+
+  .stack li {
+    display: grid;
+    place-items: center;
+    width: calc(5 * var(--u));
+    height: calc(5 * var(--u));
+    background: var(--white);
+    color: var(--blue);
+  }
+
+  .stack :global(svg) {
+    width: 62%;
+    height: 62%;
+  }
+
+  /* ---------- Projets ---------- */
+  .p-proj {
+    grid-column: 7 / -1;
+    grid-row: 5;
+  }
+
+  .projects {
+    display: grid;
+    grid-template-rows: repeat(4, 1fr);
+    padding-block: calc(0.6 * var(--u));
+  }
+
+  .project {
+    display: grid;
+    grid-template-columns: calc(10 * var(--u)) 1fr auto;
+    grid-template-rows: auto auto;
+    column-gap: calc(1.6 * var(--u));
+    align-content: center;
+    align-items: center;
+  }
+
+  .project + .project {
+    border-top: var(--line) dotted var(--rule);
+  }
+
+  .project__index {
+    grid-row: 1 / 3;
+    font-family: var(--pixel);
+    font-size: calc(9 * var(--u));
+    line-height: 0.75;
+    color: var(--lilac);
+  }
+
+  .project__title {
+    align-self: end;
+    font-family: var(--pixel);
+    font-size: calc(5 * var(--u));
+    line-height: 0.95;
+  }
+
+  .project__title a {
+    background: linear-gradient(currentColor, currentColor) 0 100% / 0 var(--line) no-repeat;
+    transition: background-size 0.25s;
+  }
+
+  .project__title a:hover,
+  .project__title a:focus-visible {
+    background-size: 100% var(--line);
+  }
+
+  .project__subtitle {
+    grid-column: 2;
+    align-self: start;
+    font-weight: 500;
+    color: var(--lilac);
+  }
+
+  .project .stack {
+    grid-column: 3;
+    grid-row: 1 / 3;
+    flex-wrap: nowrap;
+    gap: calc(0.8 * var(--u));
+    margin-top: 0;
+  }
+
+  .project .stack li {
+    width: calc(4.4 * var(--u));
+    height: calc(4.4 * var(--u));
+  }
+
+  /* ---------- Frise de formation ---------- */
+  .p-edu {
+    grid-column: 1 / -1;
+    grid-row: 6;
+  }
+
+  .timeline {
+    position: relative;
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: auto calc(2.6 * var(--u)) auto;
+    align-content: center;
+    padding: calc(0.8 * var(--u)) calc(4 * var(--u));
+  }
+
+  /* La ligne : pleine jusqu'à aujourd'hui, en pointillés vers 2027. */
+  .timeline::before,
+  .timeline::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    height: var(--line);
+  }
+
+  .timeline::before {
+    left: calc(4 * var(--u) + 10%);
+    right: calc(4 * var(--u) + 30%);
+    background: var(--white);
+  }
+
+  .timeline::after {
+    left: calc(70% - 4 * var(--u));
+    right: calc(4 * var(--u) + 10%);
+    background: repeating-linear-gradient(to right, var(--white) 0 calc(1.2 * var(--u)), transparent calc(1.2 * var(--u)) calc(2.2 * var(--u)));
+  }
+
+  .step {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    grid-column: calc(var(--i) + 1);
+    justify-self: center;
+    width: 100%;
+    padding-inline: calc(0.5 * var(--u));
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  /* Les étapes du milieu débordent sur les colonnes voisines, libres de
+     ce côté de la ligne. */
+  .step:not(:first-child, :last-child) {
+    width: 150%;
+  }
+
+  .step--above {
+    grid-row: 1;
+    justify-content: flex-end;
+    padding-bottom: calc(1.2 * var(--u));
+  }
+
+  .step--below {
+    grid-row: 3;
+    justify-content: flex-start;
+    padding-top: calc(1.2 * var(--u));
+  }
+
+  /* Le point sur la ligne. */
+  .step::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    width: calc(2.6 * var(--u));
+    height: calc(2.6 * var(--u));
+    border: var(--line) solid var(--white);
+    background: var(--white);
+    translate: -50% 0;
+  }
+
+  .step--above::after {
+    top: calc(100% + 0.2 * var(--u));
+  }
+
+  .step--below::after {
+    bottom: calc(100% + 0.2 * var(--u));
+  }
+
+  .step--future::after {
+    background: var(--blue);
+  }
+
+  .step__when {
+    font-family: var(--pixel);
+    font-size: calc(3.6 * var(--u));
+    line-height: 1;
+    color: var(--lilac);
+  }
+
+  .step__title {
+    font-family: var(--pixel);
+    font-size: calc(3.8 * var(--u));
+    line-height: 0.95;
+  }
+
+  .step__place {
+    font-weight: 500;
+    font-size: calc(1.95 * var(--u));
+  }
+
+  .step__brief {
+    font-size: calc(1.95 * var(--u));
+    color: var(--lilac);
+  }
+
+  .step--future .step__title {
+    padding: calc(0.3 * var(--u)) calc(1.2 * var(--u)) 0;
+    background: var(--white);
+    color: var(--blue);
+  }
+
+  /* ---------- Langages et outils : des icônes de bureau ---------- */
+  .p-tools {
+    grid-column: 1 / 9;
+    grid-row: 7;
+  }
+
+  .toolbox {
+    display: grid;
+    align-content: space-between;
+    padding-block: calc(2.2 * var(--u)) calc(1.8 * var(--u));
+  }
+
+  .toolbox__row {
+    display: grid;
+    grid-template-columns: calc(17 * var(--u)) 1fr;
+    align-items: start;
+  }
+
+  .toolbox__title {
+    padding-top: calc(2 * var(--u));
+    font-family: var(--micro);
+    font-size: var(--t-micro);
+    line-height: 1.2;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--lilac);
+  }
+
+  .toolbox__icons {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .tool {
+    display: grid;
+    justify-items: center;
+    align-content: start;
+    gap: calc(0.9 * var(--u));
+    text-align: center;
+  }
+
+  .tool__tile {
+    display: grid;
+    place-items: center;
+    width: calc(6 * var(--u));
+    height: calc(6 * var(--u));
+    background: var(--white);
+    color: var(--blue);
+    box-shadow: calc(0.6 * var(--u)) calc(0.6 * var(--u)) 0 var(--night);
+  }
+
+  .tool__tile :global(svg) {
+    width: 64%;
+    height: 64%;
+  }
+
+  .tool__name {
+    display: grid;
+    font-family: var(--pixel);
+    font-size: calc(3.1 * var(--u));
+    line-height: 0.85;
+  }
+
+  .tool__name small {
+    font-family: var(--micro);
+    font-size: calc(1.5 * var(--u));
+    line-height: 1.2;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--lilac);
+  }
+
+  .toolbox__methods {
+    display: grid;
+    grid-template-columns: calc(17 * var(--u)) 1fr;
+    padding-top: calc(1.6 * var(--u));
+    border-top: var(--line) dotted var(--rule);
+    font-size: calc(2 * var(--u));
+    line-height: 1.35;
+  }
+
+  .toolbox__methods span {
+    font-family: var(--micro);
+    font-size: var(--t-micro);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--lilac);
+  }
+
+  /* ---------- Contact ---------- */
+  .p-contact {
+    grid-column: 9 / -1;
+    grid-row: 7;
+  }
+
+  .contact {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr calc(18 * var(--u));
+    gap: calc(2.4 * var(--u));
+    align-items: start;
+  }
+
+  .contact__list {
+    display: grid;
+    gap: calc(1.9 * var(--u));
+    font-size: calc(2.05 * var(--u));
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .contact__list li::before {
+    content: "* ";
+    color: var(--lilac);
+  }
+
+  .contact__list a:hover,
+  .contact__list a:focus-visible {
+    background: var(--white);
+    color: var(--blue);
+  }
+
+  .contact__qr {
+    display: grid;
+    gap: calc(1 * var(--u));
+    justify-items: center;
+    font-family: var(--micro);
+    font-size: var(--t-micro);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .contact__qr > svg:first-child {
+    width: 100%;
+  }
+
+  .qr__bg {
+    fill: var(--white);
+  }
+
+  .qr__dots {
+    fill: var(--blue);
+  }
+
+  .contact__qr {
+    position: relative;
+  }
+
+  .contact__cursor {
+    position: absolute;
+    left: 97%;
+    top: calc(11 * var(--u));
+    width: calc(3.6 * var(--u));
+    pointer-events: none;
+  }
+
+  .cursor__fill {
+    fill: var(--white);
+  }
+
+  .cursor__line {
+    fill: var(--night);
+  }
+
+  .p-sparkles {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    fill: var(--white);
+    pointer-events: none;
+  }
+
+  /* Focus clavier visible sur l'aplat bleu comme sur le blanc. */
+  .poster a:focus-visible {
+    outline: max(2px, calc(0.5 * var(--u))) solid var(--white);
+    outline-offset: calc(0.4 * var(--u));
+  }
+
+  @media print {
+    .poster {
+      display: none;
+    }
+  }
+</style>

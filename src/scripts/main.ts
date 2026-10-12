@@ -10,6 +10,7 @@ import { initReel } from "./modules/reel";
 import { initSkills } from "./modules/skills";
 import { initContact } from "./modules/contact";
 import { initPrint } from "./modules/print";
+import { initCvViewer } from "./modules/cv-viewer";
 
 initTheme();
 initAnchors();
@@ -19,3 +20,4 @@ initReel();
 initSkills();
 initContact();
 initPrint();
+initCvViewer();

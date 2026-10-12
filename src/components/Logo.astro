@@ -1,0 +1,23 @@
+---
+/* Un logo de langage ou d'outil (voir data/logos.ts), inséré en SVG au build. */
+import { logos, type LogoName } from "../data/logos";
+
+interface Props {
+  name: LogoName;
+  class?: string;
+  /** Sans titre, le logo est décoratif : le nom est écrit à côté. */
+  labelled?: boolean;
+}
+
+const { name, class: className, labelled = false } = Astro.props;
+const logo = logos[name];
+---
+
+<svg
+  class={className}
+  viewBox={logo.viewBox}
+  fill="currentColor"
+  role={labelled ? "img" : undefined}
+  aria-label={labelled ? logo.title : undefined}
+  aria-hidden={labelled ? undefined : "true"}
+  focusable="false"><path d={logo.path}></path></svg>
