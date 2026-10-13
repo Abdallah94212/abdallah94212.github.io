@@ -90,9 +90,11 @@ const lastChars = [...profile.lastName];
     margin-bottom: calc(var(--name-size) * 0.08);
   }
 
+  /* Calée sur le bord droit, comme « Borji. » : la maquette respire. */
   .hero__copy {
     grid-column: 7 / -1;
     grid-row: 1;
+    justify-self: end;
     display: grid;
     gap: clamp(1.25rem, 3vh, 2rem);
     justify-items: start;
