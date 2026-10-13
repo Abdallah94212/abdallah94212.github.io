@@ -983,26 +983,30 @@ const legendClass = (key: keyof typeof lit) => `hs-leg-${key}`;
     color: var(--accent-ink);
   }
 
-  /* Ordinateur étroit : la légende garde les titres, les détails restent
-     dans les sections suivantes. */
+  /* Ordinateur étroit : la légende passe sur trois colonnes et deux rangées,
+     toutes les phrases restent visibles. */
   @media (min-width: 901px) {
     @container legend (max-width: 559px) {
       .legend__list {
-        grid-template-columns: repeat(5, max-content);
-        column-gap: 0.75rem;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        column-gap: 0.9rem;
+        row-gap: 0.7em;
       }
 
       .legend__list > li {
-        font-size: 0.6875rem;
+        font-size: 0.71875rem;
+      }
+
+      .legend__item {
+        padding-top: 0.55em;
       }
 
       .legend__title {
         gap: 0.4em;
       }
 
-      .legend__detail,
       .legend__tag {
-        display: none;
+        margin-top: 0.35em;
       }
     }
   }
