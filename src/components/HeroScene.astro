@@ -1,0 +1,1131 @@
+---
+/* La maquette de l'accueil : le parcours en une vue isométrique.
+   Un socle gravé Epitech porte la chaîne de travail (une base de données, un
+   éditeur, une interface) ; un point bleu, celui du logo et du nom, la
+   parcourt de la requête à l'interface, puis rejoint la prochaine étape :
+   l'alternance 2027, encore en pointillés.
+
+   Tout est calculé au build : une vraie projection 3D (dimétrique 2:1)
+   rendue en SVG. Aucune bibliothèque, aucune image, net à toutes les tailles
+   et dessiné avec les couleurs du thème (clair ou sombre).
+   L'animation est en CSS : elle démarre quand la scène est visible
+   (hero-scene.ts) et se résume à l'état final si le mouvement est réduit. */
+import epitechSvg from "../assets/brands/epitech.svg?raw";
+import Icon from "./Icon.astro";
+import { heroScene } from "../data/profile";
+
+/* ---------- Projection ---------- */
+const K = 32; // pixels par unité de la maquette
+const n = (value: number) => Math.round(value * 100) / 100;
+type Point = [number, number];
+type Point3 = [number, number, number];
+const iso = (x: number, y: number, z = 0): Point => [n((x - y) * K), n(((x + y) * K) / 2 - z * K)];
+const polygon = (points: Point[]) => `M${points.map((p) => p.join(" ")).join("L")}Z`;
+const face = (...points: Point3[]) => polygon(points.map((p) => iso(...p)));
+
+/** Les trois faces visibles d'un pavé : dessus, face avant gauche (y max), face avant droite (x max). */
+function box(x0: number, x1: number, y0: number, y1: number, z0: number, z1: number) {
+  return {
+    top: face([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]),
+    left: face([x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [x0, y1, z0]),
+    right: face([x1, y0, z1], [x1, y1, z1], [x1, y1, z0], [x1, y0, z0]),
+  };
+}
+
+/* Repères locaux pour dessiner « à plat » sur une face : u suit l'axe x,
+   v l'axe y (dessus) ou w monte (face gauche, y vers le haut). */
+const onTop = (x: number, y: number, z: number) => {
+  const [e, f] = iso(x, y, z);
+  return `matrix(${K} ${K / 2} ${-K} ${K / 2} ${e} ${f})`;
+};
+const onLeft = (x: number, y: number, z: number) => {
+  const [e, f] = iso(x, y, z);
+  return `matrix(${K} ${K / 2} 0 ${-K} ${e} ${f})`;
+};
+
+/** Un disque de cylindre : flanc (moitié avant) et dessus. */
+function disc(cx: number, cy: number, r: number, z0: number, z1: number) {
+  const [x, yBottom] = iso(cx, cy, z0);
+  const [, yTop] = iso(cx, cy, z1);
+  const rx = n(r * Math.SQRT2 * K);
+  const ry = n((r * Math.SQRT2 * K) / 2);
+  return {
+    side: `M${n(x - rx)} ${yBottom}A${rx} ${ry} 0 0 0 ${n(x + rx)} ${yBottom}L${n(x + rx)} ${yTop}A${rx} ${ry} 0 0 1 ${n(x - rx)} ${yTop}Z`,
+    top: { cx: x, cy: yTop, rx, ry },
+  };
+}
+
+/* Ombres portées sur le socle : la lumière vient de la gauche, l'ombre
+   s'étire vers la droite (0,55 unité par unité de hauteur). */
+function hull(points: Point[]) {
+  const sorted = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o: Point, a: Point, b: Point) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const half = (list: Point[]) => {
+    const out: Point[] = [];
+    for (const p of list) {
+      while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], p) <= 0) out.pop();
+      out.push(p);
+    }
+    return out.slice(0, -1);
+  };
+  return [...half(sorted), ...half([...sorted].reverse())];
+}
+const shadow = (footprint: [number, number][], height: number) => {
+  const shift = 0.55 * height;
+  return polygon(hull(footprint.flatMap(([x, y]) => [iso(x, y), iso(x + shift, y - shift)])));
+};
+const circleFootprint = (cx: number, cy: number, r: number) =>
+  Array.from({ length: 24 }, (_, i): [number, number] => [cx + r * Math.cos((i / 24) * Math.PI * 2), cy + r * Math.sin((i / 24) * Math.PI * 2)]);
+const rectFootprint = (x0: number, x1: number, y0: number, y1: number): [number, number][] => [
+  [x0, y0],
+  [x1, y0],
+  [x1, y1],
+  [x0, y1],
+];
+
+/* ---------- La maquette ---------- */
+
+// Le socle : Epitech, gravé sur la face avant.
+const slab = box(0, 7, 0, 7, -1.2, 0);
+// Une trame d'une unité sur le dessus, comme une planche de maquettiste.
+const slabGrid = Array.from({ length: 6 }, (_, i) => i + 1)
+  .map((i) => `M${iso(i, 0).join(" ")}L${iso(i, 7).join(" ")}M${iso(0, i).join(" ")}L${iso(7, i).join(" ")}`)
+  .join("");
+const logoPath = epitechSvg.match(/ d="([^"]+)"/)?.[1] ?? "";
+const LOGO_H = 0.56;
+const logoScale = LOGO_H / 44.102;
+const logoTransform = `${onLeft(0, 7, -1.2)} translate(${n((7 - 177.648 * logoScale) / 2)} ${n((1.2 + LOGO_H) / 2)}) scale(${logoScale} ${-logoScale})`;
+
+// 01 · La base de données : trois disques.
+const DB = { x: 1.35, y: 5.65, r: 0.9, h: 1.28 };
+const discs = [
+  [0, 0.38],
+  [0.45, 0.83],
+  [0.9, 1.28],
+].map(([z0, z1]) => disc(DB.x, DB.y, DB.r, z0, z1));
+
+// 02 · L'éditeur : un bloc dont le dessus est une page de code.
+const ED = { x0: 2.55, x1: 4.45, y0: 2.55, y1: 4.45, h: 0.5 };
+const editor = box(ED.x0, ED.x1, ED.y0, ED.y1, 0, ED.h);
+const LINE_STEP = 0.185;
+const codeLines: [number, [number, "k" | "t" | "s"][]][] = [
+  [0, [[0.34, "k"], [0.62, "t"]]],
+  [1, [[0.5, "t"], [0.3, "s"]]],
+  [1, [[0.26, "k"], [0.56, "t"]]],
+  [2, [[0.66, "t"]]],
+  [2, [[0.3, "t"], [0.24, "s"]]],
+  [1, [[0.34, "k"], [0.36, "t"]]],
+  [0, [[0.58, "t"]]],
+];
+const codeRects = codeLines.flatMap(([indent, tokens], line) => {
+  let u = 0.2 + indent * 0.16;
+  return tokens.map(([length, kind]) => {
+    const rect = { x: n(u), y: n(0.46 + line * LINE_STEP), width: length, kind };
+    u += length + 0.06;
+    return rect;
+  });
+});
+
+// 03 · L'interface : un écran debout, tourné vers la chaîne.
+const SC = { x0: 4.5, x1: 6.9, y0: 1.0, y1: 1.2, z0: 0.2, z1: 1.9 };
+const plinth = box(5.3, 6.1, 0.75, 1.55, 0, 0.2);
+const panel = box(SC.x0, SC.x1, SC.y0, SC.y1, SC.z0, SC.z1);
+const bars = [0.36, 0.6, 0.46, 0.82, 1.0].map((height, i) => ({ x: n(0.84 + i * 0.27), height, accent: i === 4 }));
+
+// 04 · La prochaine étape : un bloc en pointillés, hors du socle.
+const CU = { x0: 7.5, x1: 9.0, y0: -1.4, y1: 0.1, z0: 0.55, z1: 2.05 };
+const cube = box(CU.x0, CU.x1, CU.y0, CU.y1, CU.z0, CU.z1);
+const cubeEdges = (() => {
+  const v = (x: number, y: number, z: number) => iso(x, y, z).join(" ");
+  const { x0, x1, y0, y1, z0, z1 } = CU;
+  // Arêtes visibles, puis les trois qui partent du coin caché (arrière, bas).
+  const front = [
+    [v(x0, y0, z1), v(x1, y0, z1)],
+    [v(x1, y0, z1), v(x1, y1, z1)],
+    [v(x1, y1, z1), v(x0, y1, z1)],
+    [v(x0, y1, z1), v(x0, y0, z1)],
+    [v(x1, y0, z1), v(x1, y0, z0)],
+    [v(x1, y1, z1), v(x1, y1, z0)],
+    [v(x0, y1, z1), v(x0, y1, z0)],
+    [v(x1, y0, z0), v(x1, y1, z0)],
+    [v(x1, y1, z0), v(x0, y1, z0)],
+  ];
+  const back = [
+    [v(x0, y0, z0), v(x1, y0, z0)],
+    [v(x0, y0, z0), v(x0, y1, z0)],
+    [v(x0, y0, z0), v(x0, y0, z1)],
+  ];
+  const d = (edges: string[][]) => edges.map(([a, b]) => `M${a}L${b}`).join("");
+  return { front: d(front), back: d(back) };
+})();
+const cubeGround = face([CU.x0, CU.y0, 0], [CU.x1, CU.y0, 0], [CU.x1, CU.y1, 0], [CU.x0, CU.y1, 0]);
+
+const shadows = [
+  shadow(circleFootprint(DB.x, DB.y, DB.r), DB.h),
+  shadow(rectFootprint(ED.x0, ED.x1, ED.y0, ED.y1), ED.h),
+  shadow(rectFootprint(SC.x0, SC.x1, SC.y0, SC.y1), SC.z1),
+  shadow(rectFootprint(5.3, 6.1, 0.75, 1.55), 0.2),
+];
+
+/* ---------- Le point ---------- */
+const R = n(0.36 * K);
+const stops = {
+  data: iso(DB.x, DB.y, DB.h),
+  code: iso((ED.x0 + ED.x1) / 2, (ED.y0 + ED.y1) / 2, ED.h),
+  ui: iso(5.5, 2.15, 0),
+  next: iso((CU.x0 + CU.x1) / 2, (CU.y0 + CU.y1) / 2, CU.z1),
+};
+
+/* ---------- Le cadre et les repères ---------- */
+const VIEW = { x: -250, y: -14, w: 595, h: 282 };
+const pct = ([x, y]: Point) => `--x: ${n(((x - VIEW.x) / VIEW.w) * 100)}; --y: ${n(((y - VIEW.y) / VIEW.h) * 100)}`;
+
+/* Chaque repère : un numéro au-dessus de l'objet, relié par un trait court. */
+type StepKey = "data" | "code" | "ui" | "next";
+const callouts: { key: StepKey; number: string; at: Point; to: number }[] = [
+  { key: "data", number: "01", at: [stops.data[0], 24], to: n(stops.data[1] - DB.r * Math.SQRT2 * (K / 2) - 5) },
+  { key: "code", number: "02", at: [0, 38], to: n(iso(ED.x0, ED.y0, ED.h)[1] - 5) },
+  { key: "ui", number: "03", at: [iso(5.7, SC.y0, SC.z1)[0], 12], to: n(iso(5.7, SC.y0, SC.z1)[1] - 5) },
+  { key: "next", number: "04", at: [iso(CU.x0, CU.y0, CU.z1)[0], 0], to: n(iso(CU.x0, CU.y0, CU.z1)[1] - 5) },
+];
+const baseCallout = iso(3.5, 7, -1.2);
+
+/* ---------- Le temps ----------
+   Toutes les durées sont en secondes, multipliées en CSS par --speed
+   (plus court lors d'une visite suivante dans la session). */
+const T = {
+  slab: 0.1,
+  logo: 0.55,
+  legend: 0.45,
+  objects: { data: 0.6, code: 0.72, ui: 0.84, next: 0.96 },
+  callouts: { data: 0.95, code: 1.03, ui: 1.11, next: 1.19 },
+  dotIn: 1.35,
+  land: 1.65,
+  hops: [
+    [2.1, 2.5],
+    [2.9, 3.3],
+    [3.75, 4.3],
+  ],
+  query: 1.7,
+  sweep: 2.5,
+  bars: 3.3,
+  bracket: 3.85,
+  arrive: 4.3,
+  end: 5.2,
+};
+
+/* La légende suit le point : chaque étape s'allume à son passage, puis
+   s'éteint quand il repart. La dernière, la prochaine étape, reste allumée. */
+const visits = {
+  base: [0.35, 1.65],
+  data: [1.65, 2.1],
+  code: [2.5, 2.9],
+  ui: [3.3, 3.75],
+  next: [4.3, 0],
+} as const;
+const visit = (key: keyof typeof visits) => `--on: ${visits[key][0]}s; --off: ${visits[key][1]}s`;
+
+/* Trajectoire du point, en images clés générées : un axe horizontal
+   linéaire et un axe vertical (montée amortie, chute accélérée) donnent de
+   vraies paraboles. */
+const pc = (t: number) => `${Math.round((t / T.end) * 100000) / 1000}%`;
+const UP = "cubic-bezier(0.33, 1, 0.68, 1)";
+const DOWN = "cubic-bezier(0.32, 0, 0.67, 0)";
+const route = [stops.data, stops.code, stops.ui, stops.next];
+const lifts = [34, 30, 45];
+
+const xFrames = [`0%{transform:translateX(${route[0][0]}px)}`];
+const yFrames = [`0%,${pc(T.dotIn)}{transform:translateY(${route[0][1] - 110}px);animation-timing-function:${DOWN}}`, `${pc(T.land)}{transform:translateY(${route[0][1]}px)}`];
+const squash: [number, string][] = [];
+const landing = (t: number) => {
+  squash.push([t, "scale(1,1)"], [t + 0.06, "scale(1.3,0.72)"], [t + 0.16, "scale(0.94,1.06)"], [t + 0.26, "scale(1,1)"]);
+};
+landing(T.land);
+T.hops.forEach(([start, stop], i) => {
+  const [from, to] = [route[i], route[i + 1]];
+  const apex = Math.min(from[1], to[1]) - lifts[i];
+  xFrames.push(`${pc(start)}{transform:translateX(${from[0]}px)}`, `${pc(stop)}{transform:translateX(${to[0]}px)}`);
+  yFrames.push(
+    `${pc(start)}{transform:translateY(${from[1]}px);animation-timing-function:${UP}}`,
+    `${pc((start + stop) / 2)}{transform:translateY(${apex}px);animation-timing-function:${DOWN}}`,
+    `${pc(stop)}{transform:translateY(${to[1]}px)}`,
+  );
+  squash.push([start - 0.12, "scale(1,1)"], [start - 0.02, "scale(1.16,0.84)"], [start + 0.1, "scale(0.88,1.14)"], [start + 0.22, "scale(1,1)"]);
+  landing(stop);
+});
+xFrames.push(`100%{transform:translateX(${route[3][0]}px)}`);
+yFrames.push(`100%{transform:translateY(${route[3][1]}px)}`);
+squash.sort((a, b) => a[0] - b[0]);
+
+// L'ombre du point : posée pendant les arrêts, effacée pendant les sauts.
+const shadowFrames = [`0%,${pc(T.dotIn)}{opacity:0;transform:translate(${route[0][0]}px,${route[0][1]}px) scale(0.3)}`, `${pc(T.land)}{opacity:1;transform:translate(${route[0][0]}px,${route[0][1]}px) scale(1)}`];
+T.hops.forEach(([start, stop], i) => {
+  const [from, to] = [route[i], route[i + 1]];
+  shadowFrames.push(
+    `${pc(start)}{opacity:1;transform:translate(${from[0]}px,${from[1]}px) scale(1)}`,
+    `${pc(start + 0.12)}{opacity:0;transform:translate(${from[0]}px,${from[1]}px) scale(0.6)}`,
+    `${pc(stop - 0.1)}{opacity:0;transform:translate(${to[0]}px,${to[1]}px) scale(0.6)}`,
+    `${pc(stop)}{opacity:1;transform:translate(${to[0]}px,${to[1]}px) scale(1)}`,
+  );
+});
+shadowFrames.push(`100%{opacity:1;transform:translate(${route[3][0]}px,${route[3][1]}px) scale(1)}`);
+
+const dotCss = `
+.hs-dot-x{transform:translateX(${route[3][0]}px)}
+.hs-dot-y{transform:translateY(${route[3][1]}px)}
+.hs-dot-shadow{transform:translate(${route[3][0]}px,${route[3][1]}px)}
+@media (prefers-reduced-motion:no-preference){
+.hs-dot-x{animation:hs-dot-x calc(${T.end}s * var(--speed,1)) linear both,hs-dot-in calc(${T.end}s * var(--speed,1)) linear both}
+.hs-dot-y{animation:hs-dot-y calc(${T.end}s * var(--speed,1)) linear both}
+.hs-dot-body{animation:hs-dot-squash calc(${T.end}s * var(--speed,1)) ease-out both}
+.hs-dot-shadow{animation:hs-dot-shadow calc(${T.end}s * var(--speed,1)) linear both}
+.hs-clock{animation:hs-clock calc(${T.end}s * var(--speed,1)) linear both}
+}
+@keyframes hs-dot-x{${xFrames.join("")}}
+@keyframes hs-dot-y{${yFrames.join("")}}
+@keyframes hs-dot-in{0%,${pc(T.dotIn)}{opacity:0}${pc(T.dotIn + 0.08)},100%{opacity:1}}
+@keyframes hs-dot-squash{0%{transform:scale(1,1)}${squash.map(([t, s]) => `${pc(t)}{transform:${s}}`).join("")}100%{transform:scale(1,1)}}
+@keyframes hs-dot-shadow{${shadowFrames.join("")}}
+@keyframes hs-clock{from{opacity:1}to{opacity:1}}
+`.replace(/\n/g, "");
+
+const delay = (seconds: number) => `--d: ${n(seconds)}s`;
+const steps = heroScene.steps.map((step, i) => ({ ...step, number: `0${i + 1}` }));
+---
+
+<div class="scene" data-scene>
+  <div class="scene__art" style={`--ratio: ${n(VIEW.w / VIEW.h)}`}>
+    <div class="scene__canvas hs-clock" data-scene-canvas>
+      <svg class="scene__svg" viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`} aria-hidden="true" focusable="false">
+        <defs>
+          <!-- La trajectoire du point, calculée au build. -->
+          <style set:html={dotCss}></style>
+          <clipPath id="scene-slab-top"><path d={slab.top}></path></clipPath>
+          <linearGradient id="scene-cylinder" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0" class="stop-light"></stop>
+            <stop offset="1" class="stop-dark"></stop>
+          </linearGradient>
+        </defs>
+
+        <!-- Le socle, gravé Epitech -->
+        <g data-key="base" data-lift="-6">
+          <g class="a-rise" style={delay(T.slab)}>
+            <path class="f-top" d={slab.top}></path>
+            <path class="grid" d={slabGrid}></path>
+            <path class="f-left" d={slab.left}></path>
+            <path class="f-right" d={slab.right}></path>
+            <path class="logo a-fade" style={delay(T.logo)} transform={logoTransform} d={logoPath}></path>
+          </g>
+        </g>
+
+        <!-- Ombres portées -->
+        <g clip-path="url(#scene-slab-top)">
+          <path class="cast a-fade" style={delay(T.objects.data + 0.3)} d={shadows[0]}></path>
+          <path class="cast a-fade" style={delay(T.objects.code + 0.3)} d={shadows[1]}></path>
+          <path class="cast a-fade" style={delay(T.objects.ui + 0.3)} d={shadows[2]}></path>
+          <path class="cast a-fade" style={delay(T.objects.ui + 0.3)} d={shadows[3]}></path>
+        </g>
+
+        <!-- 01 · Base de données -->
+        <g data-key="data" data-lift="8">
+          <g class="a-drop" style={delay(T.objects.data)}>
+            {
+              discs.map((d, i) => (
+                <g>
+                  <path class="f-cylinder" d={d.side} />
+                  <path class="flash a-flash" style={delay(T.query + (2 - i) * 0.09)} d={d.side} />
+                  <ellipse class="f-top" cx={d.top.cx} cy={d.top.cy} rx={d.top.rx} ry={d.top.ry} />
+                </g>
+              ))
+            }
+          </g>
+        </g>
+
+        <!-- 02 · Éditeur -->
+        <g data-key="code" data-lift="12">
+          <g class="a-drop" style={delay(T.objects.code)}>
+            <path class="f-top" d={editor.top}></path>
+            <path class="f-left" d={editor.left}></path>
+            <path class="f-right" d={editor.right}></path>
+            <g transform={onTop(ED.x0, ED.y0, ED.h)}>
+              <rect class="code-bg" x="0.08" y="0.08" width="1.74" height="1.74" rx="0.06"></rect>
+              <rect class="code-bar" x="0.08" y="0.08" width="1.74" height="0.24"></rect>
+              {[0.2, 0.32, 0.44].map((x) => <circle class="code-dot" cx={x} cy="0.2" r="0.04" />)}
+              <rect class="code-cursor a-sweep" style={delay(T.sweep)} x="0.12" y={n(0.46 - 0.05)} width="1.66" height="0.17" rx="0.03"></rect>
+              {codeRects.map((r) => <rect class={`code-${r.kind}`} x={r.x} y={r.y} width={r.width} height="0.07" rx="0.035" />)}
+            </g>
+          </g>
+        </g>
+
+        <!-- 03 · Interface -->
+        <g data-key="ui" data-lift="16">
+          <g class="a-drop" style={delay(T.objects.ui)}>
+            <path class="f-top" d={plinth.top}></path>
+            <path class="f-left" d={plinth.left}></path>
+            <path class="f-right" d={plinth.right}></path>
+            <path class="f-top" d={panel.top}></path>
+            <path class="f-left" d={panel.left}></path>
+            <path class="f-right" d={panel.right}></path>
+            <g transform={onLeft(SC.x0, SC.y1, SC.z0)}>
+              <rect class="ui-glass" x="0.07" y="0.07" width="2.26" height="1.56"></rect>
+              <rect class="ui-bar" x="0.07" y="1.42" width="2.26" height="0.21"></rect>
+              {[0.18, 0.3, 0.42].map((x) => <circle class="ui-dot" cx={x} cy="1.525" r="0.038" />)}
+              <rect class="ui-side" x="0.07" y="0.07" width="0.55" height="1.35"></rect>
+              {
+                [
+                  [1.2, 0.36],
+                  [1.08, 0.26],
+                  [0.84, 0.34],
+                ].map(([y, w]) => <rect class="ui-line" x="0.15" y={y} width={w} height="0.045" />)
+              }
+              <rect class="ui-line" x="0.15" y="0.62" width="0.38" height="0.03"></rect>
+              <circle class="ui-knob" cx="0.4" cy="0.635" r="0.05"></circle>
+              <rect class="ui-axis" x="0.76" y="0.2" width="1.45" height="0.02"></rect>
+              {bars.map((bar, i) => <rect class={`ui-col a-grow${bar.accent ? " is-accent" : ""}`} style={delay(T.bars + i * 0.07)} x={bar.x} y="0.22" width="0.16" height={bar.height} />)}
+            </g>
+          </g>
+        </g>
+
+        <!-- 04 · Prochaine étape -->
+        <g data-key="next" data-lift="22">
+          <g class="a-fade" style={delay(T.objects.next)}>
+            <path class="ghost-ground" d={cubeGround}></path>
+            <g class="a-arrive" style={delay(T.arrive)}>
+              <path class="ghost-fill" d={cube.top}></path>
+              <path class="ghost-fill ghost-fill--l" d={cube.left}></path>
+              <path class="ghost-fill ghost-fill--r" d={cube.right}></path>
+              <path class="ghost-back" d={cubeEdges.back}></path>
+              <path class="ghost-edge" d={cubeEdges.front}></path>
+            </g>
+          </g>
+        </g>
+
+        <!-- Repères -->
+        {
+          callouts.map((callout) => (
+            <path
+              class="tick a-draw"
+              data-key={callout.key}
+              style={delay(T.callouts[callout.key] + 0.1)}
+              pathLength="1"
+              d={`M${callout.at[0]} ${callout.at[1] + 9}V${callout.to}`}
+            />
+          ))
+        }
+
+        <!-- Le point -->
+        <ellipse class="dot-shadow hs-dot-shadow" cx="0" cy="0" rx={n(R * 1.1)} ry={n(R * 0.45)}></ellipse>
+        <g class="hs-dot-x">
+          <g class="hs-dot-y">
+            <circle class="dot-ring a-ring" style={delay(T.arrive + 0.15)} cx="0" cy={-R} r={R}></circle>
+            <circle class="dot hs-dot-body" cx="0" cy={-R} r={R}></circle>
+          </g>
+        </g>
+      </svg>
+
+      <div class="scene__nums" aria-hidden="true">
+        {
+          callouts.map((callout) => (
+            <span class="scene__num a-fade" data-key={callout.key} style={`${pct(callout.at)}; ${delay(T.callouts[callout.key])}`}>
+              {callout.number}
+            </span>
+          ))
+        }
+        <span class="scene__num a-fade" data-key="base" style={`${pct([baseCallout[0], baseCallout[1] + 16])}; ${delay(T.logo + 0.2)}`}>00</span>
+      </div>
+
+      <button class="scene__replay" type="button" data-scene-replay hidden>
+        <Icon name="replay" />
+        Rejouer
+      </button>
+    </div>
+  </div>
+
+  <div class="legend">
+    <p class="legend__bracket a-reveal" data-key="i2m" style={delay(T.bracket)}>
+      <strong>{heroScene.experience.title}</strong>
+      {heroScene.experience.detail}
+    </p>
+    <ul class="legend__list">
+      <li class="legend__item legend__item--base a-rise" data-key="base" style={`${visit("base")}; ${delay(T.legend)}`}>
+        <span class="legend__title"><span class="legend__num" aria-hidden="true">00</span>{heroScene.base.title}</span>
+        {heroScene.base.lines.map((line) => <span class="legend__detail">{line}</span>)}
+      </li>
+      {
+        steps.map((step, i) => (
+          <li class="legend__item legend__item--step a-rise" data-key={step.key} style={`${visit(step.key)}; ${delay(T.legend + 0.08 * (i + 1))}`}>
+            <span class="legend__title">
+              <span class="legend__num" aria-hidden="true">{step.number}</span>
+              {step.title}
+            </span>
+            <span class="legend__detail">{step.detail}</span>
+          </li>
+        ))
+      }
+      <li class="legend__item legend__item--next a-rise" data-key="next" style={`${visit("next")}; ${delay(T.legend + 0.32)}`}>
+        <span class="legend__title"><span class="legend__num" aria-hidden="true">04</span>{heroScene.next.title}</span>
+        <span class="legend__detail">{heroScene.next.detail}</span>
+        <span class="legend__tag">Prochaine étape</span>
+      </li>
+    </ul>
+  </div>
+</div>
+
+
+<style>
+  /* ---------- Matières ----------
+     Une maquette d'architecte en carton : le dessus est le plus clair, la
+     face gauche reçoit la lumière, la droite reste dans l'ombre. Un seul
+     accent, le bleu du site, pour le point et ce qu'il touche. */
+  .scene {
+    --iso-top: #fbfcfd;
+    --iso-left: #e5e8ed;
+    --iso-right: #ccd1da;
+    --iso-edge: rgb(12 14 19 / 26%);
+    --iso-cast: rgb(12 14 19 / 7%);
+    --iso-engrave: rgb(12 14 19 / 58%);
+    --iso-glass: #ffffff;
+    --iso-tint: rgb(12 14 19 / 5%);
+    --iso-mark: rgb(12 14 19 / 16%);
+    --code-bg: #10131a;
+    --code-text: #7d8494;
+    --code-soft: #4a505e;
+    /* Deux blocs dans la grille de l'accueil : la maquette et sa légende. */
+    display: contents;
+  }
+
+  :global(:root[data-theme="dark"]) .scene {
+    --iso-top: #1d2029;
+    --iso-left: #15171e;
+    --iso-right: #0e1015;
+    --iso-edge: rgb(236 238 243 / 20%);
+    --iso-cast: rgb(0 0 0 / 38%);
+    --iso-engrave: rgb(236 238 243 / 52%);
+    --iso-glass: #252934;
+    --iso-tint: rgb(236 238 243 / 5%);
+    --iso-mark: rgb(236 238 243 / 18%);
+    --code-bg: #07080b;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme="light"])) .scene {
+      --iso-top: #1d2029;
+      --iso-left: #15171e;
+      --iso-right: #0e1015;
+      --iso-edge: rgb(236 238 243 / 20%);
+      --iso-cast: rgb(0 0 0 / 38%);
+      --iso-engrave: rgb(236 238 243 / 52%);
+      --iso-glass: #252934;
+      --iso-tint: rgb(236 238 243 / 5%);
+      --iso-mark: rgb(236 238 243 / 18%);
+      --code-bg: #07080b;
+    }
+  }
+
+  /* ---------- La maquette ---------- */
+  .scene__art {
+    container-type: inline-size;
+    min-width: 0;
+  }
+
+  /* Format fixe : la maquette prend la plus grande taille qui tient dans
+     son emplacement, en largeur comme en hauteur. */
+  .scene__canvas {
+    position: relative;
+    width: min(100cqw, 100cqh * var(--ratio));
+    aspect-ratio: var(--ratio);
+  }
+
+  .scene__svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .scene__svg :is(path, ellipse, rect, circle) {
+    vector-effect: non-scaling-stroke;
+    stroke-linejoin: round;
+  }
+
+  .f-top,
+  .f-left,
+  .f-right,
+  .f-cylinder {
+    stroke: var(--iso-edge);
+    stroke-width: 1;
+  }
+
+  .f-top {
+    fill: var(--iso-top);
+  }
+
+  .f-left {
+    fill: var(--iso-left);
+  }
+
+  .f-right {
+    fill: var(--iso-right);
+  }
+
+  .f-cylinder {
+    fill: url(#scene-cylinder);
+  }
+
+  .stop-light {
+    stop-color: var(--iso-left);
+  }
+
+  .stop-dark {
+    stop-color: var(--iso-right);
+  }
+
+  .grid {
+    fill: none;
+    stroke: var(--iso-tint);
+    stroke-width: 1;
+  }
+
+  .logo {
+    fill: var(--iso-engrave);
+  }
+
+  .cast {
+    fill: var(--iso-cast);
+  }
+
+  .flash {
+    fill: var(--accent);
+    opacity: 0;
+  }
+
+  /* Éditeur : une page sombre dans les deux thèmes. */
+  .code-bg {
+    fill: var(--code-bg);
+  }
+
+  .code-bar {
+    fill: rgb(255 255 255 / 7%);
+  }
+
+  .code-dot {
+    fill: rgb(255 255 255 / 28%);
+  }
+
+  .code-t {
+    fill: var(--code-text);
+  }
+
+  .code-s {
+    fill: var(--code-soft);
+  }
+
+  .code-k {
+    fill: var(--accent);
+  }
+
+  .code-cursor {
+    fill: color-mix(in srgb, var(--accent) 40%, transparent);
+    opacity: 0;
+  }
+
+  /* Écran */
+  .ui-glass {
+    fill: var(--iso-glass);
+  }
+
+  .ui-bar,
+  .ui-side {
+    fill: var(--iso-tint);
+  }
+
+  .ui-dot,
+  .ui-line,
+  .ui-axis {
+    fill: var(--iso-mark);
+  }
+
+  .ui-knob {
+    fill: var(--accent);
+  }
+
+  .ui-col {
+    fill: color-mix(in srgb, var(--ink) 72%, transparent);
+  }
+
+  .ui-col.is-accent {
+    fill: var(--accent);
+  }
+
+  /* Prochaine étape : un bloc encore en pointillés. */
+  .ghost-ground {
+    fill: none;
+    stroke: var(--iso-edge);
+    stroke-dasharray: 3 4;
+  }
+
+  .ghost-fill {
+    fill: color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+
+  .ghost-fill--l {
+    fill: color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+
+  .ghost-fill--r {
+    fill: color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+
+  .ghost-edge,
+  .ghost-back {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 1.25;
+    stroke-dasharray: 4 3.5;
+    stroke-linecap: round;
+  }
+
+  .ghost-back {
+    opacity: 0.35;
+  }
+
+  .tick {
+    fill: none;
+    stroke: var(--line-strong);
+    stroke-width: 1;
+  }
+
+  /* Le point */
+  .dot {
+    fill: var(--accent);
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+  }
+
+  .dot-shadow {
+    fill: var(--iso-cast);
+  }
+
+  .dot-ring {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 1.5;
+    opacity: 0;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  /* Les numéros des repères, en HTML pour rester lisibles à toute taille. */
+  .scene__nums {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .scene__num {
+    position: absolute;
+    left: calc(var(--x) * 1%);
+    top: calc(var(--y) * 1%);
+    translate: -50% -50%;
+    font-family: var(--font-mono);
+    font-size: clamp(0.625rem, 1.9cqi, 0.75rem);
+    line-height: 1;
+    color: var(--accent);
+  }
+
+  .scene__replay {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0;
+    border: 0;
+    background: none;
+    font-family: var(--font-mono);
+    font-size: var(--fs-label);
+    color: var(--muted);
+    transition: color var(--dur-fast);
+  }
+
+  .scene__replay:hover {
+    color: var(--ink);
+  }
+
+  /* ---------- La légende ----------
+     Une ligne par étape, dans l'ordre de la maquette ; l'accolade I2M
+     regroupe les trois étapes de la chaîne. */
+  .legend {
+    container: legend / inline-size;
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) repeat(3, minmax(0, 1fr)) minmax(0, 1.1fr);
+    column-gap: clamp(0.9rem, 1.6vw, 1.6rem);
+    row-gap: 0.85em;
+    line-height: 1.35;
+  }
+
+  /* Le texte suit la largeur de la légende (unités de conteneur). */
+  .legend__list > li {
+    font-size: clamp(0.75rem, 2.04cqi, 0.875rem);
+  }
+
+  .legend__list {
+    display: contents;
+  }
+
+  .legend__bracket {
+    position: relative;
+    grid-row: 1;
+    grid-column: 2 / 5;
+    padding: 0 0 0.55em;
+    border-bottom: 1px solid var(--line-strong);
+    font-family: var(--font-mono);
+    font-size: clamp(0.6875rem, 1.76cqi, 0.75rem);
+    color: var(--muted);
+  }
+
+  .legend__bracket strong {
+    margin-right: 0.4em;
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  /* Les deux pattes de l'accolade. */
+  .legend__bracket::before,
+  .legend__bracket::after {
+    content: "";
+    position: absolute;
+    bottom: -0.45em;
+    width: 1px;
+    height: 0.45em;
+    background: var(--line-strong);
+  }
+
+  .legend__bracket::before {
+    left: 0;
+  }
+
+  .legend__bracket::after {
+    right: 0;
+  }
+
+  .legend__item {
+    position: relative;
+    grid-row: 2;
+    display: grid;
+    align-content: start;
+    padding-top: 0.75em;
+    transition: opacity var(--dur) var(--ease-out);
+  }
+
+  /* Un filet par étape ; celle que visite le point s'allume en bleu. */
+  .legend__item::before,
+  .legend__item::after {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 1px;
+    background: var(--line-strong);
+  }
+
+  .legend__item::after {
+    height: 2px;
+    top: -0.5px;
+    background: var(--ink);
+    transform-origin: left;
+  }
+
+  .legend__item--next::after {
+    background: var(--accent);
+  }
+
+  .legend__title {
+    display: flex;
+    align-items: baseline;
+    gap: 0.55em;
+    font-weight: 620;
+    color: var(--ink);
+  }
+
+  .legend__num {
+    font-family: var(--font-mono);
+    font-size: 0.82em;
+    font-weight: 450;
+    color: var(--accent);
+  }
+
+  .legend__detail {
+    color: var(--muted);
+  }
+
+  .legend__tag {
+    justify-self: start;
+    margin-top: 0.5em;
+    padding: 0.08em 0.6em 0.14em;
+    border: 1px dashed var(--accent);
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 0.8em;
+    color: var(--accent);
+  }
+
+  /* Ordinateur étroit : la légende garde les titres, les détails restent
+     dans les sections suivantes. */
+  @media (min-width: 901px) {
+    @container legend (max-width: 559px) {
+      .legend {
+        grid-template-columns: repeat(5, max-content);
+        column-gap: 0.75rem;
+      }
+
+      .legend__list > li {
+        font-size: 0.6875rem;
+      }
+
+      .legend__title {
+        gap: 0.4em;
+      }
+
+      .legend__detail,
+      .legend__tag {
+        display: none;
+      }
+
+      .legend__bracket {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+  }
+
+  /* Téléphone et tablette : la légende passe sous la maquette, sur trois colonnes. */
+  @media (max-width: 900px) {
+    .legend {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      row-gap: 1.1em;
+    }
+
+    .legend__list > li {
+      font-size: 0.8125rem;
+    }
+
+    .legend__item--base {
+      grid-row: 1;
+      grid-column: 1 / -1;
+    }
+
+    .legend__bracket {
+      grid-row: 2;
+      grid-column: 1 / -1;
+    }
+
+    .legend__item--step {
+      grid-row: 3;
+    }
+
+    .legend__item--next {
+      grid-row: 4;
+      grid-column: 1 / -1;
+    }
+  }
+
+  /* ---------- Survol : un repère et son objet ressortent ensemble ---------- */
+  @media (hover: hover) and (pointer: fine) {
+    .scene [data-key] {
+      transition: opacity var(--dur) var(--ease-out);
+    }
+
+    /* Même spécificité partout : l'ordre décide. */
+    .scene[data-focus] [data-key] {
+      opacity: 0.3;
+    }
+
+    .scene[data-focus] [data-key="base"],
+    .scene[data-focus="data"] [data-key="data"],
+    .scene[data-focus="code"] [data-key="code"],
+    .scene[data-focus="ui"] [data-key="ui"],
+    .scene[data-focus="next"] [data-key="next"],
+    .scene[data-focus="i2m"] :is([data-key="i2m"], [data-key="data"], [data-key="code"], [data-key="ui"]) {
+      opacity: 1;
+    }
+  }
+
+  /* ---------- Animation ----------
+     Avec JavaScript, tout attend sur la première image tant que la scène
+     n'est pas à l'écran ; une fois jouée, elle garde son état final. */
+  @media (prefers-reduced-motion: no-preference) {
+    .a-rise {
+      animation: scene-rise calc(0.7s * var(--speed, 1)) var(--ease-out) calc(var(--d) * var(--speed, 1)) both;
+    }
+
+    .a-drop {
+      animation: scene-drop calc(0.62s * var(--speed, 1)) cubic-bezier(0.3, 1.32, 0.6, 1) calc(var(--d) * var(--speed, 1)) both;
+    }
+
+    .a-fade {
+      animation: scene-fade calc(0.5s * var(--speed, 1)) ease-out calc(var(--d) * var(--speed, 1)) both;
+    }
+
+    .a-draw {
+      stroke-dasharray: 1;
+      animation: scene-draw calc(0.45s * var(--speed, 1)) var(--ease-out) calc(var(--d) * var(--speed, 1)) both;
+    }
+
+    .a-flash {
+      animation: scene-flash calc(0.5s * var(--speed, 1)) ease-out calc(var(--d) * var(--speed, 1)) both;
+    }
+
+    .a-sweep {
+      animation: scene-sweep calc(0.4s * var(--speed, 1)) linear calc(var(--d) * var(--speed, 1)) both;
+    }
+
+    .a-grow {
+      transform-box: fill-box;
+      transform-origin: 50% 0%;
+      animation: scene-grow calc(0.45s * var(--speed, 1)) var(--ease-out) calc(var(--d) * var(--speed, 1)) both;
+    }
+
+    .a-arrive {
+      animation: scene-arrive calc(0.6s * var(--speed, 1)) var(--ease-out) calc(var(--d) * var(--speed, 1)) both;
+    }
+
+    .a-ring {
+      animation: scene-ring calc(0.9s * var(--speed, 1)) var(--ease-out) calc(var(--d) * var(--speed, 1)) both;
+    }
+
+    .a-reveal {
+      animation: scene-reveal calc(0.7s * var(--speed, 1)) var(--ease-in-out) calc(var(--d) * var(--speed, 1)) both;
+    }
+
+    .legend__item::after {
+      animation:
+        legend-fill calc(0.45s * var(--speed, 1)) var(--ease-out) calc(var(--on) * var(--speed, 1)) both,
+        legend-cool calc(0.5s * var(--speed, 1)) ease calc(var(--off) * var(--speed, 1)) both;
+    }
+
+    .legend__item--next::after {
+      animation: legend-fill calc(0.45s * var(--speed, 1)) var(--ease-out) calc(var(--on) * var(--speed, 1)) both;
+    }
+
+    :global(html.js) .scene:not([data-state="play"]):not([data-state="done"]) *,
+    :global(html.js) .scene:not([data-state="play"]):not([data-state="done"]) *::after {
+      animation-play-state: paused;
+    }
+
+    .scene[data-state="done"] *,
+    .scene[data-state="done"] *::after {
+      animation: none;
+    }
+  }
+
+  @keyframes scene-rise {
+    from {
+      opacity: 0;
+      translate: 0 12px;
+    }
+  }
+
+  @keyframes scene-drop {
+    from {
+      opacity: 0;
+      transform: translateY(-28px);
+    }
+    40% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes scene-fade {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes scene-draw {
+    from {
+      stroke-dashoffset: 1;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @keyframes scene-flash {
+    0% {
+      opacity: 0;
+    }
+    35% {
+      opacity: 0.85;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  /* Le curseur descend la page de code, ligne par ligne. */
+  @keyframes scene-sweep {
+    0% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    90% {
+      opacity: 1;
+      transform: translateY(1.11px);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(1.11px);
+    }
+  }
+
+  @keyframes scene-grow {
+    from {
+      transform: scaleY(0);
+    }
+  }
+
+  /* À l'arrivée du point, le bloc en pointillés prend corps. */
+  @keyframes scene-arrive {
+    from {
+      opacity: 0.4;
+    }
+    40% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes scene-ring {
+    from {
+      opacity: 0.7;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(2.6);
+    }
+  }
+
+  @keyframes scene-reveal {
+    from {
+      clip-path: inset(-1em 100% -1em 0);
+    }
+    to {
+      clip-path: inset(-1em 0 -1em 0);
+    }
+  }
+
+  @keyframes legend-fill {
+    from {
+      transform: scaleX(0);
+    }
+  }
+
+  @keyframes legend-cool {
+    from {
+      background: var(--accent);
+    }
+  }
+</style>

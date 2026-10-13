@@ -37,6 +37,7 @@ Le site est publié sur GitHub Pages, à l’adresse https://abdallah94212.githu
 | [GSAP](https://gsap.com) + ScrollTrigger + SplitText | Animations liées au défilement | Épingler les fiches projets et la frise, découper les titres en lignes : ce sont des cas où le CSS seul devient fragile. |
 | [Lenis](https://lenis.darkroom.engineering) | Défilement doux | Synchronise la molette avec les animations au scroll pour éviter les saccades. Désactivé si le système demande moins de mouvement. |
 | Mona Sans (variable) | Typographie | Une seule famille avec axes de graisse et de largeur : la largeur sert aux grands titres, la graisse réagit au pointeur sur le nom. Polices auto-hébergées, aucune requête externe. |
+| Maquette isométrique de l’accueil | Le parcours en une image animée | Une vraie projection 3D (dimétrique 2:1) calculée au build et rendue en SVG, animée en CSS : nette à toutes les tailles, aux couleurs du thème clair ou sombre, quelques Ko, aucune bibliothèque. Une vidéo pré-rendue ne suivrait ni le thème ni la largeur de l’écran ; une scène Three.js coûterait plus de 150 Ko pour un résultat moins net. |
 | Phosphor Icons | Icônes | Insérées en SVG au build : pas de JavaScript, pas de requête. |
 | [Simple Icons](https://simpleicons.org) (CC0) et deux logos de [Devicon](https://devicon.dev) (MIT) | Logos des langages et outils du CV | Un seul tracé par logo, coloré par la palette du CV, inséré au build. Java et SQL Server, absents de Simple Icons, sont copiés dans `src/assets/logos/`. |
 | VT323, Silkscreen | Typographie pixel du CV | Police de terminal pour le nom et les titres, police bitmap pour les petites étiquettes. Auto-hébergées, chargées seulement sur `/cv/`. |
@@ -44,7 +45,7 @@ Le site est publié sur GitHub Pages, à l’adresse https://abdallah94212.githu
 | View Transitions API | Passage d’une fiche projet à son étude de cas | Natif dans le navigateur : la capture et le titre se transforment d’une page à l’autre. Les navigateurs sans support changent simplement de page. |
 | [Playwright](https://playwright.dev) (développement uniquement) | Génère le PDF du CV | Le PDF sort du même rendu d’impression que la page : une seule source, et un garde-fou qui refuse un CV de plus d’une page. Rien n’est envoyé au navigateur des visiteurs. |
 
-Volontairement absents : React (aucun état complexe à gérer), Three.js ou WebGL (rien dans le contenu ne gagne à être en 3D), Tailwind (les styles sont scopés par composant et partagent des variables CSS).
+Volontairement absents : React (aucun état complexe à gérer), Three.js ou WebGL (la maquette de l’accueil n’a besoin que d’une projection fixe, que le SVG rend mieux), Tailwind (les styles sont scopés par composant et partagent des variables CSS).
 
 ## Arborescence
 
@@ -56,10 +57,12 @@ src/
 │   ├── cv.ts             Textes du CV (une page A4), versions courtes et logos
 │   └── logos.ts          Logos des langages et outils (Simple Icons, Devicon)
 ├── assets/projects/      Captures des projets (sources PNG, optimisées au build)
+├── assets/brands/        Logo d’Epitech, gravé sur le socle de la maquette
 ├── layouts/
 │   └── BaseLayout.astro  <head>, SEO, thème, en-tête, pied de page, script principal
 ├── components/           Une section ou un élément réutilisable par fichier
-│   ├── Hero.astro        Accueil : nom, accroche, fenêtre de projets
+│   ├── Hero.astro        Accueil : nom, accroche, maquette
+│   ├── HeroScene.astro   La maquette isométrique et sa légende
 │   ├── About.astro       Manifeste et repères
 │   ├── Projects.astro    Fiches projets empilées et autres dépôts
 │   ├── ProjectPanel.astro
@@ -79,7 +82,7 @@ src/
 │   ├── main.ts           Cœur, sur toutes les pages : thème, menu, ancres, contact (≈ 4 Ko)
 │   ├── motion.ts         Couche de mouvement, sur l’accueil et les études de cas (GSAP, Lenis)
 │   ├── lib/              Préférences, défilement, configuration de GSAP
-│   └── modules/          Un comportement par fichier (hero, reel, reveal, projects…)
+│   └── modules/          Un comportement par fichier (hero, hero-scene, reveal, projects…)
 └── styles/global.css     Variables (couleurs, typographie, espacements), base, boutons
 scripts/cv-pdf.mjs        Génère le PDF du CV avec Chrome et vérifie qu’il tient sur une page
 ```
@@ -91,6 +94,7 @@ scripts/cv-pdf.mjs        Génère le PDF du CV avec Chrome et vérifie qu’il 
   1. placer les captures dans `src/assets/projects/<slug>/` (PNG ou JPG, idéalement 2880 px de large) ;
   2. les importer en haut de `src/data/projects.ts`, puis ajouter une entrée dans `projects` (titre, pitch, technologies, teinte, captures, blocs de l’étude de cas) ;
   3. la fiche d’accueil et la page `/projets/<slug>/` sont générées automatiquement.
+- **Maquette de l’accueil** : ses libellés sont dans `heroScene` (`src/data/profile.ts`) ; la géométrie et le minutage sont en tête de `HeroScene.astro`.
 - **Couleurs et typographie** : variables en tête de `src/styles/global.css` (thème clair et thème sombre).
 - **CV** : textes dans `src/data/cv.ts` (le titre et le dépôt des projets viennent de `projects.ts`). Les champs `brief` et `logos` ne servent qu’à la version artistique. Après chaque modification, lancer `npm run cv:pdf` pour régénérer le PDF à télécharger ; le script s’arrête en erreur si le CV dépasse une page.
 
@@ -112,7 +116,7 @@ Chaque animation a une raison d’être ; toutes s’effacent si le système dem
 | --- | --- |
 | Entrée de l’accueil | Le nom monte lettre par lettre, puis le point bleu se pose : c’est la signature, reprise dans « ab. » et « Écrivez-moi. ». En CSS pur (lettres découpées au build) : elle démarre au premier affichage. Version accélérée lors d’une visite suivante. |
 | Graisse du nom qui suit la souris | Le nom « fait la mise au point » là où se trouve le pointeur. Uniquement à la souris. |
-| Fenêtre de projets | De vraies captures défilent dès l’arrivée : on voit le travail dans les trois premières secondes. Pause au survol, au focus ou avec le bouton. |
+| Maquette de l’accueil | Le parcours en cinq secondes, sans rien lire. Un socle gravé Epitech porte la chaîne de travail : une base de données, un éditeur, une interface. Le point bleu du nom tombe sur la base, saute d’étape en étape (la base s’interroge, le code se parcourt, le graphique monte), puis rejoint la prochaine étape, l’alternance 2027, encore en pointillés. La légende, à côté du nom, s’allume au même rythme ; l’accolade I2M Advisory regroupe les trois étapes pratiquées en entreprise. L’animation ne démarre que si la maquette est à l’écran, dure cinq secondes et se rejoue à la demande ; au survol, une étape et son objet ressortent ensemble. En quittant l’accueil, la maquette se décompose : le socle descend, les objets montent. |
 | Manifeste mot à mot | Le texte s’éclaire au rythme de la lecture. |
 | Fiches projets empilées | Chaque projet occupe l’écran puis recule dans l’ombre quand le suivant arrive : un projet à la fois. |
 | Transition vers l’étude de cas | La capture et le titre de la fiche deviennent ceux de la page projet : on ne perd pas le fil. |
@@ -128,8 +132,12 @@ Chaque animation a une raison d’être ; toutes s’effacent si le système dem
 - Contenu présent dans le HTML généré : lisible sans JavaScript et par les moteurs de recherche ; données structurées `Person` sur l’accueil.
 - Images en AVIF/WebP avec `srcset`, chargement différé hors écran, police principale préchargée.
 - JavaScript en deux temps : un cœur de 4 Ko partout, et la couche de mouvement (54 Ko) seulement là où elle sert, évaluée juste après le premier affichage. Le CV et la 404 n’en chargent pas.
-- Lighthouse (build de production) : 100 en accessibilité, bonnes pratiques et SEO ; performance 100 sur ordinateur, 97-98 sur mobile.
+- Lighthouse (build de production) : 100 en accessibilité, bonnes pratiques et SEO ; performance 100 sur ordinateur, 96 sur mobile.
 - Le formulaire ne collecte rien : il prépare un e-mail dans la messagerie du visiteur.
+
+## Logo d’Epitech
+
+Le logo gravé sur le socle de la maquette appartient à Epitech. Il est repris tel quel (tracé du site officiel, en une seule couleur) pour indiquer la formation suivie, sans autre usage.
 
 ## Captures des projets
 

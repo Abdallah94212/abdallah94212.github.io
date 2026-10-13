@@ -82,15 +82,20 @@ function initNameFocus(hero: HTMLElement, chars: HTMLElement[], shine: HTMLEleme
 }
 
 /* En quittant l'accueil, les deux lignes du nom s'écartent légèrement et le
-   texte s'efface : la section suivante prend le relais sans coupure. */
+   texte s'efface ; la maquette se décompose (le socle descend, les objets
+   montent, chacun à sa vitesse) : la section suivante prend le relais sans
+   coupure. */
 function initScrollOut(hero: HTMLElement) {
   const mm = gsap.matchMedia();
   mm.add("(min-width: 901px) and (prefers-reduced-motion: no-preference)", () => {
-    gsap
+    const tl = gsap
       .timeline({ scrollTrigger: { trigger: hero, start: "top top", end: "bottom top", scrub: true } })
       .to(hero.querySelector(".hero__line--first"), { xPercent: -7, ease: "none" }, 0)
       .to(hero.querySelector(".hero__line--last"), { xPercent: 7, ease: "none" }, 0)
       .to(hero.querySelector(".hero__copy"), { yPercent: -40, opacity: 0, ease: "none" }, 0)
-      .to(hero.querySelector(".reel"), { yPercent: -12, ease: "none" }, 0);
+      .to(hero.querySelector(".scene__art"), { yPercent: -8, ease: "none" }, 0);
+    hero.querySelectorAll<SVGGElement>("[data-lift]").forEach((layer) => {
+      tl.to(layer, { y: -Number(layer.dataset.lift), ease: "none" }, 0);
+    });
   });
 }

@@ -31,7 +31,22 @@ export const facts = [
   { value: "2027", label: "Disponible en alternance, de janvier à\u00a0août." },
 ] as const;
 
-export type JourneyKind = "Expérience" | "Formation" | "Distinction" | "Stage";
+/* La maquette de l'accueil (HeroScene) : le socle, la chaîne de travail
+   et la prochaine étape. Chaque libellé reprend un fait du parcours.
+   Après un tiret, un gluon (U+2060) : l'espace insécable seule n'empêche
+   pas la coupure à cet endroit. */
+export const heroScene = {
+  base: { title: "Epitech", lines: ["Pré-MSc depuis 2026", "Digital School, 2024\u00a0–\u2060\u00a02026"] },
+  experience: { title: "I2M Advisory", detail: "janv.\u00a0–\u2060\u00a0juin 2026" },
+  steps: [
+    { key: "data", title: "Requêtes", detail: "SQL Server" },
+    { key: "code", title: "Traitement", detail: "Python, pandas" },
+    { key: "ui", title: "Interface", detail: "Streamlit, web" },
+  ],
+  next: { title: "Alternance", detail: "janv.\u00a0–\u2060\u00a0août 2027" },
+} as const;
+
+export type JourneyKind ="Expérience" | "Formation" | "Distinction" | "Stage";
 
 export interface JourneyItem {
   when: string;
