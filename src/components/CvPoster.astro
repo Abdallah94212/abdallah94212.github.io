@@ -703,11 +703,15 @@ const sparkle = "M0 -1C.1 -.1 .1 -.1 1 0C.1 .1 .1 .1 0 1C-.1 .1 -.1 .1 -1 0C-.1 
     padding-block: calc(2 * var(--u));
   }
 
+  /* Passage à la ligne simple : avec « pretty » (réglage global des
+     paragraphes), Safari raccourcit les lignes et la justification creuse
+     d'énormes espaces entre les mots. */
   .profile-text {
     font-family: var(--pixel);
     font-size: calc(3.95 * var(--u));
     line-height: 1.12;
     text-align: justify;
+    text-wrap: wrap;
     hyphens: manual;
   }
 
