@@ -9,7 +9,7 @@ export const profile = {
   kicker: ["Pré-MSc à Epitech", "Développement, data et web"],
   statement: "Je développe des applications data et des sites web, de la requête SQL à l’interface.",
   manifesto:
-    "Je cherche une alternance de janvier à août 2027. Chez I2M Advisory, j’ai participé à chaque étape d’un outil d’analyse de données, du besoin jusqu’aux tests. C’est ce type de mission que je souhaite retrouver, en développement, en data ou en web.",
+    "J’ai encore beaucoup à découvrir, et c’est précisément ce qui me motive. Je recherche une alternance de janvier à août 2027 pour continuer à progresser, apprendre des autres et participer à des projets concrets.",
   email: "abdallah.borji@epitech.eu",
   phone: "07\u00a085\u00a082\u00a088\u00a026",
   phoneHref: "+33785828826",
