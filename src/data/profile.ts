@@ -37,11 +37,11 @@ export const facts = [
    Après un tiret, un gluon (U+2060) : l'espace insécable seule n'empêche
    pas la coupure à cet endroit. */
 export const heroScene = {
-  base: { title: "Epitech", lines: ["Pré-MSc depuis 2026", "Digital School, 2024\u00a0–\u2060\u00a02026"] },
+  base: { title: "Epitech", lines: ["Pré-MSc à Epitech"] },
   steps: [
     { key: "data", title: "Comprendre", detail: "le besoin" },
     { key: "code", title: "Analyser", detail: "les données" },
-    { key: "ui", title: "Concevoir", detail: "l’interface" },
+    { key: "ui", title: "Concevoir", detail: "la solution" },
   ],
   next: { title: "Alternance", detail: "janv.\u00a0–\u2060\u00a0août 2027" },
 } as const;
