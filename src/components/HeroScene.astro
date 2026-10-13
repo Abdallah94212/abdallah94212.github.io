@@ -695,7 +695,7 @@ const legendClass = (key: keyof typeof lit) => `hs-leg-${key}`;
      son emplacement, en largeur comme en hauteur. */
   .scene__canvas {
     position: relative;
-    width: min(100cqw, 100cqh * var(--ratio));
+    width: calc(min(100cqw, 100cqh * var(--ratio)) * var(--scene-scale, 1));
     aspect-ratio: var(--ratio);
   }
 
