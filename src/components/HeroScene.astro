@@ -344,7 +344,8 @@ loop("hs-ring", [
   [P, "opacity:0;transform:scale(2.6)"],
 ]);
 
-// Les filets de la légende : bleu à l'arrivée du point, noir une fois l'étape passée.
+// La légende : à l'arrivée du point, l'étape s'allume (filet, texte, pastille) ;
+// une fois passée, son filet reste noir.
 const order = ["base", "data", "code", "ui", "next"] as const;
 order.forEach((key, i) => {
   const on = lit[key];
@@ -361,6 +362,28 @@ order.forEach((key, i) => {
   frames.push([resetStart, `transform:scaleX(1);${color}`, DOWN], [resetEnd, `transform:scaleX(0);${color}`], [P, `transform:scaleX(0);${color}`]);
   if (frames[0][0] === frames[1][0]) frames.shift();
   loop(`hs-leg-${key}`, frames, `.hs-leg-${key}::after`);
+
+  // Toute l'étape passe en bleu, légèrement soulevée, tant que le point y est.
+  const end = off ?? resetStart;
+  const highlight = (name: string, selector: string, rest: string, active: string) => {
+    const text: Frame[] = [
+      [0, rest],
+      [on, rest, OUT],
+      [on + 0.3, active],
+      [end, active, "ease-out"],
+      [end + 0.2, rest],
+      [P, rest],
+    ];
+    if (text[0][0] === text[1][0]) text.shift();
+    loop(name, text, selector);
+  };
+  const lift = "transform:translateY(-0.12em)";
+  const still = "transform:translateY(0)";
+  highlight(`hs-title-${key}`, `.hs-leg-${key} .legend__title`, `color:var(--ink);${still}`, `color:var(--accent);${lift}`);
+  highlight(`hs-detail-${key}`, `.hs-leg-${key} .legend__detail`, `color:var(--muted);${still}`, `color:var(--accent);${lift}`);
+  if (key === "next") {
+    highlight("hs-tag", ".hs-leg-next .legend__tag", "background-color:transparent;color:var(--accent)", "background-color:var(--accent);color:var(--accent-ink)");
+  }
 });
 
 /* L'image fixe (mouvement réduit) est la fin du parcours : le point posé
@@ -855,8 +878,13 @@ const legendClass = (key: keyof typeof lit) => `hs-leg-${key}`;
     transform-origin: left;
   }
 
+  /* Image fixe (mouvement réduit) : le point est sur la prochaine étape. */
   .legend__item--next::after {
     background: var(--accent);
+  }
+
+  .legend__item--next :is(.legend__title, .legend__detail) {
+    color: var(--accent);
   }
 
   .legend__title {
@@ -884,9 +912,10 @@ const legendClass = (key: keyof typeof lit) => `hs-leg-${key}`;
     padding: 0.08em 0.6em 0.14em;
     border: 1px dashed var(--accent);
     border-radius: 999px;
+    background: var(--accent);
     font-family: var(--font-mono);
     font-size: 0.8em;
-    color: var(--accent);
+    color: var(--accent-ink);
   }
 
   /* Ordinateur étroit : la légende garde les titres, les détails restent
