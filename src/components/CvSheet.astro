@@ -132,15 +132,22 @@ const skills = [...cvSkills, { title: "Langues", items: languages.map((language)
     --cv-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
     --cv-label: 8.6em;
     --cv-gutter: 1.65em;
-    --cv-space: 0.82em;
+    --cv-space: 0.66em;
 
-    padding: 3.95em 4.95em;
+    /* Marges de 12 mm (haut) et 15 mm (côtés), dessinées dans la feuille :
+       @page { margin: 0 } évite que le navigateur ajoute date et adresse.
+       Un navigateur qui impose quand même ses marges (Safari sur iPhone)
+       rétrécit la page imprimable (100vw < 210 mm) : nos marges s'effacent
+       d'autant au lieu de s'y ajouter, et le CV tient toujours sur une page.
+       Pas de marge en bas : la fin de page est déjà blanche. */
+    --cv-imposed: calc((210mm - 100vw) / 2);
+    padding: clamp(0mm, 12mm - var(--cv-imposed), 12mm) clamp(0mm, 15mm - var(--cv-imposed), 15mm) 0;
     background: #fff;
     color: var(--cv-text);
     font-family: var(--cv-sans);
     font-size: 8.6pt;
     font-weight: 400;
-    line-height: 1.4;
+    line-height: 1.37;
     font-synthesis: none;
   }
 
