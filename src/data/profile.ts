@@ -9,7 +9,7 @@ export const profile = {
   kicker: ["Pré-MSc à Epitech", "Développement, data et web"],
   statement: "Je développe des applications data et des sites web, de la requête SQL à l’interface.",
   manifesto:
-    "Je code surtout en Python et en JavaScript. Côté data, des tableaux de bord et un modèle qui estime les chances de podium en Formule 1. Côté web, des sites et une API REST.",
+    "Je cherche une alternance de janvier à août 2027. Chez I2M Advisory, j’ai participé à chaque étape d’un outil d’analyse de données, du besoin jusqu’aux tests. C’est ce type de mission que je souhaite retrouver, en développement, en data ou en web.",
   email: "abdallah.borji@epitech.eu",
   phone: "07\u00a085\u00a082\u00a088\u00a026",
   phoneHref: "+33785828826",
@@ -28,7 +28,7 @@ export const profile = {
 export const facts = [
   { value: "6 mois", label: "Développeur logiciel data chez I2M Advisory, de janvier à juin 2026." },
   { value: "Lauréat", label: "Prix national TF1, catégorie « Sécurité & Confidentialité », en 2025." },
-  { value: "2027", label: "Disponible en alternance, de janvier à\u00a0août." },
+  { value: "Epitech", label: "En Pré-MSc depuis 2026\u00a0: informatique et développement logiciel." },
 ] as const;
 
 /* La maquette de l'accueil (HeroScene) : le socle, trois verbes pour la
