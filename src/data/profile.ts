@@ -31,17 +31,17 @@ export const facts = [
   { value: "2027", label: "Disponible en alternance, de janvier à\u00a0août." },
 ] as const;
 
-/* La maquette de l'accueil (HeroScene) : le socle, la chaîne de travail
-   et la prochaine étape. Chaque libellé reprend un fait du parcours.
+/* La maquette de l'accueil (HeroScene) : le socle, trois verbes pour la
+   façon de travailler, et la prochaine étape. Volontairement général : c'est
+   une page de garde, le détail des expériences vient plus bas.
    Après un tiret, un gluon (U+2060) : l'espace insécable seule n'empêche
    pas la coupure à cet endroit. */
 export const heroScene = {
   base: { title: "Epitech", lines: ["Pré-MSc depuis 2026", "Digital School, 2024\u00a0–\u2060\u00a02026"] },
-  experience: { title: "I2M Advisory", detail: "janv.\u00a0–\u2060\u00a0juin 2026" },
   steps: [
-    { key: "data", title: "Requêtes", detail: "SQL Server" },
-    { key: "code", title: "Traitement", detail: "Python, pandas" },
-    { key: "ui", title: "Interface", detail: "Streamlit, web" },
+    { key: "data", title: "Comprendre", detail: "le besoin" },
+    { key: "code", title: "Analyser", detail: "les données" },
+    { key: "ui", title: "Concevoir", detail: "l’interface" },
   ],
   next: { title: "Alternance", detail: "janv.\u00a0–\u2060\u00a0août 2027" },
 } as const;

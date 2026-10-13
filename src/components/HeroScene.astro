@@ -216,7 +216,6 @@ const L = {
   query: 0.95,
   sweep: 1.75,
   bars: 2.55,
-  bracket: 3.0,
   ring: 3.7,
   reset: [5.7, 6.1], // tout se range avant le tour suivant
 };
@@ -343,18 +342,6 @@ loop("hs-ring", [
   [L.ring, "opacity:0.7;transform:scale(1)", OUT],
   [L.ring + 0.9, "opacity:0;transform:scale(2.6)"],
   [P, "opacity:0;transform:scale(2.6)"],
-]);
-
-// L'accolade I2M se trace quand le point a parcouru les trois étapes.
-const hidden = "clip-path:inset(-1em 100% -1em 0)";
-const shown = "clip-path:inset(-1em 0 -1em 0)";
-loop("hs-bracket", [
-  [0, `${hidden};opacity:1`],
-  [L.bracket, `${hidden};opacity:1`, "cubic-bezier(0.65, 0, 0.35, 1)"],
-  [L.bracket + 0.7, `${shown};opacity:1`],
-  [resetStart, `${shown};opacity:1`, "ease-in"],
-  [resetEnd, `${shown};opacity:0`],
-  [P, `${shown};opacity:0`],
 ]);
 
 // Les filets de la légende : bleu à l'arrivée du point, noir une fois l'étape passée.
@@ -534,10 +521,6 @@ const legendClass = (key: keyof typeof lit) => `hs-leg-${key}`;
   </div>
 
   <div class="legend">
-    <p class="legend__bracket hs-bracket" data-key="i2m">
-      <strong>{heroScene.experience.title}</strong>
-      {heroScene.experience.detail}
-    </p>
     <ul class="legend__list">
       <li class={`legend__item legend__item--base a-rise ${legendClass("base")}`} data-key="base" style={delay(T.legend)}>
         <span class="legend__title"><span class="legend__num" aria-hidden="true">00</span>{heroScene.base.title}</span>
@@ -829,10 +812,12 @@ const legendClass = (key: keyof typeof lit) => `hs-leg-${key}`;
   }
 
   /* ---------- La légende ----------
-     Une ligne par étape, dans l'ordre de la maquette ; l'accolade I2M
-     regroupe les trois étapes de la chaîne. */
+     Une ligne par étape, dans l'ordre de la maquette. */
   .legend {
     container: legend / inline-size;
+  }
+
+  .legend__list {
     display: grid;
     grid-template-columns: minmax(0, 1.45fr) repeat(3, minmax(0, 1fr)) minmax(0, 1.1fr);
     column-gap: clamp(0.9rem, 1.6vw, 1.6rem);
@@ -845,49 +830,8 @@ const legendClass = (key: keyof typeof lit) => `hs-leg-${key}`;
     font-size: clamp(0.75rem, 2.04cqi, 0.875rem);
   }
 
-  .legend__list {
-    display: contents;
-  }
-
-  .legend__bracket {
-    position: relative;
-    grid-row: 1;
-    grid-column: 2 / 5;
-    padding: 0 0 0.55em;
-    border-bottom: 1px solid var(--line-strong);
-    font-family: var(--font-mono);
-    font-size: clamp(0.6875rem, 1.76cqi, 0.75rem);
-    color: var(--muted);
-  }
-
-  .legend__bracket strong {
-    margin-right: 0.4em;
-    font-weight: 500;
-    color: var(--ink);
-  }
-
-  /* Les deux pattes de l'accolade. */
-  .legend__bracket::before,
-  .legend__bracket::after {
-    content: "";
-    position: absolute;
-    bottom: -0.45em;
-    width: 1px;
-    height: 0.45em;
-    background: var(--line-strong);
-  }
-
-  .legend__bracket::before {
-    left: 0;
-  }
-
-  .legend__bracket::after {
-    right: 0;
-  }
-
   .legend__item {
     position: relative;
-    grid-row: 2;
     display: grid;
     align-content: start;
     padding-top: 0.75em;
@@ -949,7 +893,7 @@ const legendClass = (key: keyof typeof lit) => `hs-leg-${key}`;
      dans les sections suivantes. */
   @media (min-width: 901px) {
     @container legend (max-width: 559px) {
-      .legend {
+      .legend__list {
         grid-template-columns: repeat(5, max-content);
         column-gap: 0.75rem;
       }
@@ -966,18 +910,12 @@ const legendClass = (key: keyof typeof lit) => `hs-leg-${key}`;
       .legend__tag {
         display: none;
       }
-
-      .legend__bracket {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
     }
   }
 
   /* Téléphone et tablette : la légende passe sous la maquette, sur trois colonnes. */
   @media (max-width: 900px) {
-    .legend {
+    .legend__list {
       grid-template-columns: repeat(3, minmax(0, 1fr));
       row-gap: 1.1em;
     }
@@ -991,17 +929,12 @@ const legendClass = (key: keyof typeof lit) => `hs-leg-${key}`;
       grid-column: 1 / -1;
     }
 
-    .legend__bracket {
-      grid-row: 2;
-      grid-column: 1 / -1;
-    }
-
     .legend__item--step {
-      grid-row: 3;
+      grid-row: 2;
     }
 
     .legend__item--next {
-      grid-row: 4;
+      grid-row: 3;
       grid-column: 1 / -1;
     }
   }
@@ -1021,8 +954,7 @@ const legendClass = (key: keyof typeof lit) => `hs-leg-${key}`;
     .scene[data-focus="data"] [data-key="data"],
     .scene[data-focus="code"] [data-key="code"],
     .scene[data-focus="ui"] [data-key="ui"],
-    .scene[data-focus="next"] [data-key="next"],
-    .scene[data-focus="i2m"] :is([data-key="i2m"], [data-key="data"], [data-key="code"], [data-key="ui"]) {
+    .scene[data-focus="next"] [data-key="next"] {
       opacity: 1;
     }
   }
