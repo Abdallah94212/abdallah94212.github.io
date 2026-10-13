@@ -1,44 +1,37 @@
-/* Maquette de l'accueil (HeroScene.astro). L'animation est en CSS ; ce module
-   décide quand elle joue : seulement quand la scène est à l'écran, en pause
-   sinon. Une fois terminée, elle garde son état final et peut être rejouée.
-   Au survol, un repère et son objet ressortent ensemble. */
+/* Maquette de l'accueil (HeroScene.astro). L'animation est en CSS : une
+   entrée, puis le parcours du point en boucle, synchronisé avec la légende.
+   Ce module décide quand elle joue : seulement quand la maquette est à
+   l'écran, et jamais pendant qu'on la survole (avec sa légende), pour lire
+   une étape tranquillement. Au survol, l'étape et son objet ressortent. */
 import { hasFinePointer, prefersReducedMotion } from "../lib/preferences";
 
 export function initHeroScene() {
   const scene = document.querySelector<HTMLElement>("[data-scene]");
-  if (!scene) return;
+  // La racine n'a pas de boîte (display: contents) : on observe la maquette.
+  const canvas = scene?.querySelector<HTMLElement>("[data-scene-canvas]");
+  if (!scene || !canvas) return;
   if (hasFinePointer()) initFocus(scene);
+  if (prefersReducedMotion()) return;
 
-  if (prefersReducedMotion()) {
-    scene.dataset.state = "done";
-    return;
-  }
-
-  const replay = scene.querySelector<HTMLButtonElement>("[data-scene-replay]");
   let visible = false;
-
+  let hovered = false;
   const sync = () => {
-    if (scene.dataset.state === "done") return;
-    scene.dataset.state = visible ? "play" : "ready";
+    scene.dataset.state = visible && !hovered ? "play" : "ready";
   };
 
-  scene.addEventListener("animationend", (event) => {
-    if (event.animationName !== "hs-clock") return;
-    scene.dataset.state = "done";
-    if (replay) replay.hidden = false;
-  });
+  if (hasFinePointer()) {
+    scene.querySelectorAll<HTMLElement>("[data-scene-canvas], .legend").forEach((area) => {
+      area.addEventListener("pointerenter", () => {
+        hovered = true;
+        sync();
+      });
+      area.addEventListener("pointerleave", () => {
+        hovered = false;
+        sync();
+      });
+    });
+  }
 
-  replay?.addEventListener("click", () => {
-    // Rejouée à la demande, l'animation reprend son rythme normal.
-    scene.style.setProperty("--speed", "1");
-    replay.hidden = true;
-    scene.dataset.state = "ready";
-    sync();
-  });
-
-  // La racine de la scène n'a pas de boîte (display: contents) : on observe la maquette.
-  const canvas = scene.querySelector<HTMLElement>("[data-scene-canvas]");
-  if (!canvas) return;
   new IntersectionObserver(
     ([entry]) => {
       visible = entry.isIntersecting;

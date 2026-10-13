@@ -8,10 +8,11 @@
    Tout est calculé au build : une vraie projection 3D (dimétrique 2:1)
    rendue en SVG. Aucune bibliothèque, aucune image, net à toutes les tailles
    et dessiné avec les couleurs du thème (clair ou sombre).
-   L'animation est en CSS : elle démarre quand la scène est visible
-   (hero-scene.ts) et se résume à l'état final si le mouvement est réduit. */
+   L'animation est en CSS : une entrée, puis le parcours du point en boucle,
+   synchronisé avec la légende. Elle ne joue que si la maquette est visible
+   et s'arrête au survol (hero-scene.ts) ; si le mouvement est réduit, il
+   reste l'image finale. */
 import epitechSvg from "../assets/brands/epitech.svg?raw";
-import Icon from "./Icon.astro";
 import { heroScene } from "../data/profile";
 
 /* ---------- Projection ---------- */
@@ -191,115 +192,211 @@ const callouts: { key: StepKey; number: string; at: Point; to: number }[] = [
 const baseCallout = iso(3.5, 7, -1.2);
 
 /* ---------- Le temps ----------
-   Toutes les durées sont en secondes, multipliées en CSS par --speed
-   (plus court lors d'une visite suivante dans la session). */
+   L'entrée (socle, objets, légende) se joue une fois, multipliée par
+   --speed (plus courte lors d'une visite suivante). Puis le parcours du point
+   tourne en boucle : toutes ses pistes, légende comprise, partagent la même
+   période et le même départ, elles restent donc synchronisées. */
 const T = {
   slab: 0.1,
   logo: 0.55,
   legend: 0.45,
   objects: { data: 0.6, code: 0.72, ui: 0.84, next: 0.96 },
   callouts: { data: 0.95, code: 1.03, ui: 1.11, next: 1.19 },
-  dotIn: 1.35,
-  land: 1.65,
-  hops: [
-    [2.1, 2.5],
-    [2.9, 3.3],
-    [3.75, 4.3],
-  ],
-  query: 1.7,
-  sweep: 2.5,
-  bars: 3.3,
-  bracket: 3.85,
-  arrive: 4.3,
-  end: 5.2,
 };
+const LOOP_START = 1.35; // secondes, multipliées par --speed
+const P = 6.6; // période de la boucle, en secondes
+const L = {
+  pop: 0.3, // le point sort du socle
+  hops: [
+    [0.5, 0.9],
+    [1.35, 1.75],
+    [2.15, 2.55],
+    [3.0, 3.55],
+  ],
+  query: 0.95,
+  sweep: 1.75,
+  bars: 2.55,
+  bracket: 3.0,
+  ring: 3.7,
+  reset: [5.7, 6.1], // tout se range avant le tour suivant
+};
+// Chaque étape de la légende s'allume à l'arrivée du point, s'éteint à la suivante.
+const lit = { base: 0, data: 0.9, code: 1.75, ui: 2.55, next: 3.55 };
 
-/* La légende suit le point : chaque étape s'allume à son passage, puis
-   s'éteint quand il repart. La dernière, la prochaine étape, reste allumée. */
-const visits = {
-  base: [0.35, 1.65],
-  data: [1.65, 2.1],
-  code: [2.5, 2.9],
-  ui: [3.3, 3.75],
-  next: [4.3, 0],
-} as const;
-const visit = (key: keyof typeof visits) => `--on: ${visits[key][0]}s; --off: ${visits[key][1]}s`;
+/* Le point part du socle, devant la base de données. */
+const origin = iso(2.4, 6.4, 0);
+const route = [origin, stops.data, stops.code, stops.ui, stops.next];
+const lifts = [26, 34, 30, 45];
 
-/* Trajectoire du point, en images clés générées : un axe horizontal
-   linéaire et un axe vertical (montée amortie, chute accélérée) donnent de
-   vraies paraboles. */
-const pc = (t: number) => `${Math.round((t / T.end) * 100000) / 1000}%`;
+const pc = (t: number) => `${Math.round((t / P) * 100000) / 1000}%`;
 const UP = "cubic-bezier(0.33, 1, 0.68, 1)";
 const DOWN = "cubic-bezier(0.32, 0, 0.67, 0)";
-const route = [stops.data, stops.code, stops.ui, stops.next];
-const lifts = [34, 30, 45];
-
-const xFrames = [`0%{transform:translateX(${route[0][0]}px)}`];
-const yFrames = [`0%,${pc(T.dotIn)}{transform:translateY(${route[0][1] - 110}px);animation-timing-function:${DOWN}}`, `${pc(T.land)}{transform:translateY(${route[0][1]}px)}`];
-const squash: [number, string][] = [];
-const landing = (t: number) => {
-  squash.push([t, "scale(1,1)"], [t + 0.06, "scale(1.3,0.72)"], [t + 0.16, "scale(0.94,1.06)"], [t + 0.26, "scale(1,1)"]);
+const OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
+type Frame = [number, string, string?];
+const keyframes = (name: string, frames: Frame[]) =>
+  `@keyframes ${name}{${frames.map(([t, css, ease]) => `${pc(t)}{${css}${ease ? `;animation-timing-function:${ease}` : ""}}`).join("")}}`;
+const loops: string[] = [];
+const loop = (name: string, frames: Frame[], selector = `.${name}`) => {
+  loops.push(keyframes(name, frames), `${selector}{animation:${name} ${P}s linear calc(${LOOP_START}s * var(--speed,1)) infinite both}`);
 };
-landing(T.land);
-T.hops.forEach(([start, stop], i) => {
-  const [from, to] = [route[i], route[i + 1]];
-  const apex = Math.min(from[1], to[1]) - lifts[i];
-  xFrames.push(`${pc(start)}{transform:translateX(${from[0]}px)}`, `${pc(stop)}{transform:translateX(${to[0]}px)}`);
-  yFrames.push(
-    `${pc(start)}{transform:translateY(${from[1]}px);animation-timing-function:${UP}}`,
-    `${pc((start + stop) / 2)}{transform:translateY(${apex}px);animation-timing-function:${DOWN}}`,
-    `${pc(stop)}{transform:translateY(${to[1]}px)}`,
-  );
-  squash.push([start - 0.12, "scale(1,1)"], [start - 0.02, "scale(1.16,0.84)"], [start + 0.1, "scale(0.88,1.14)"], [start + 0.22, "scale(1,1)"]);
-  landing(stop);
-});
-xFrames.push(`100%{transform:translateX(${route[3][0]}px)}`);
-yFrames.push(`100%{transform:translateY(${route[3][1]}px)}`);
-squash.sort((a, b) => a[0] - b[0]);
 
-// L'ombre du point : posée pendant les arrêts, effacée pendant les sauts.
-const shadowFrames = [`0%,${pc(T.dotIn)}{opacity:0;transform:translate(${route[0][0]}px,${route[0][1]}px) scale(0.3)}`, `${pc(T.land)}{opacity:1;transform:translate(${route[0][0]}px,${route[0][1]}px) scale(1)}`];
-T.hops.forEach(([start, stop], i) => {
+/* Trajectoire : un axe horizontal linéaire et un axe vertical (montée
+   amortie, chute accélérée) donnent de vraies paraboles. */
+const [resetStart, resetEnd] = L.reset;
+const last = route[route.length - 1];
+const xs: Frame[] = [[0, `transform:translateX(${origin[0]}px)`]];
+const ys: Frame[] = [[0, `transform:translateY(${origin[1]}px)`]];
+const squash: [number, string, string?][] = [
+  [0, "scale(0)", OUT],
+  [L.pop, "scale(1)"],
+];
+const shade: Frame[] = [
+  [0, `opacity:0;transform:translate(${origin[0]}px,${origin[1]}px) scale(0.3)`, OUT],
+  [L.pop, `opacity:1;transform:translate(${origin[0]}px,${origin[1]}px) scale(1)`],
+];
+L.hops.forEach(([start, stop], i) => {
   const [from, to] = [route[i], route[i + 1]];
-  shadowFrames.push(
-    `${pc(start)}{opacity:1;transform:translate(${from[0]}px,${from[1]}px) scale(1)}`,
-    `${pc(start + 0.12)}{opacity:0;transform:translate(${from[0]}px,${from[1]}px) scale(0.6)}`,
-    `${pc(stop - 0.1)}{opacity:0;transform:translate(${to[0]}px,${to[1]}px) scale(0.6)}`,
-    `${pc(stop)}{opacity:1;transform:translate(${to[0]}px,${to[1]}px) scale(1)}`,
+  xs.push([start, `transform:translateX(${from[0]}px)`], [stop, `transform:translateX(${to[0]}px)`]);
+  ys.push(
+    [start, `transform:translateY(${from[1]}px)`, UP],
+    [(start + stop) / 2, `transform:translateY(${Math.min(from[1], to[1]) - lifts[i]}px)`, DOWN],
+    [stop, `transform:translateY(${to[1]}px)`],
+  );
+  squash.push(
+    [start - 0.12, "scale(1,1)"],
+    [start - 0.02, "scale(1.16,0.84)"],
+    [start + 0.1, "scale(0.88,1.14)"],
+    [start + 0.22, "scale(1,1)"],
+    [stop, "scale(1,1)"],
+    [stop + 0.06, "scale(1.3,0.72)"],
+    [stop + 0.16, "scale(0.94,1.06)"],
+    [stop + 0.26, "scale(1,1)"],
+  );
+  shade.push(
+    [start, `opacity:1;transform:translate(${from[0]}px,${from[1]}px) scale(1)`],
+    [start + 0.12, `opacity:0;transform:translate(${from[0]}px,${from[1]}px) scale(0.6)`],
+    [stop - 0.1, `opacity:0;transform:translate(${to[0]}px,${to[1]}px) scale(0.6)`],
+    [stop, `opacity:1;transform:translate(${to[0]}px,${to[1]}px) scale(1)`],
   );
 });
-shadowFrames.push(`100%{opacity:1;transform:translate(${route[3][0]}px,${route[3][1]}px) scale(1)}`);
+xs.push([P, `transform:translateX(${last[0]}px)`]);
+ys.push([P, `transform:translateY(${last[1]}px)`]);
+squash.push([resetStart, "scale(1)", DOWN], [resetEnd, "scale(0)"], [P, "scale(0)"]);
+shade.push(
+  [resetStart, `opacity:1;transform:translate(${last[0]}px,${last[1]}px) scale(1)`],
+  [resetEnd, `opacity:0;transform:translate(${last[0]}px,${last[1]}px) scale(0.3)`],
+  [P, `opacity:0;transform:translate(${last[0]}px,${last[1]}px) scale(0.3)`],
+);
 
-const dotCss = `
-.hs-dot-x{transform:translateX(${route[3][0]}px)}
-.hs-dot-y{transform:translateY(${route[3][1]}px)}
-.hs-dot-shadow{transform:translate(${route[3][0]}px,${route[3][1]}px)}
-@media (prefers-reduced-motion:no-preference){
-.hs-dot-x{animation:hs-dot-x calc(${T.end}s * var(--speed,1)) linear both,hs-dot-in calc(${T.end}s * var(--speed,1)) linear both}
-.hs-dot-y{animation:hs-dot-y calc(${T.end}s * var(--speed,1)) linear both}
-.hs-dot-body{animation:hs-dot-squash calc(${T.end}s * var(--speed,1)) ease-out both}
-.hs-dot-shadow{animation:hs-dot-shadow calc(${T.end}s * var(--speed,1)) linear both}
-.hs-clock{animation:hs-clock calc(${T.end}s * var(--speed,1)) linear both}
-}
-@keyframes hs-dot-x{${xFrames.join("")}}
-@keyframes hs-dot-y{${yFrames.join("")}}
-@keyframes hs-dot-in{0%,${pc(T.dotIn)}{opacity:0}${pc(T.dotIn + 0.08)},100%{opacity:1}}
-@keyframes hs-dot-squash{0%{transform:scale(1,1)}${squash.map(([t, s]) => `${pc(t)}{transform:${s}}`).join("")}100%{transform:scale(1,1)}}
-@keyframes hs-dot-shadow{${shadowFrames.join("")}}
-@keyframes hs-clock{from{opacity:1}to{opacity:1}}
+loop("hs-dot-x", xs);
+loop("hs-dot-y", ys);
+loop("hs-dot-body", squash.sort((a, b) => a[0] - b[0]).map(([t, s, ease]) => [t, `transform:${s}`, ease]));
+loop("hs-dot-shadow", shade);
+
+// La base de données s'interroge, disque par disque, du haut vers le bas.
+[0, 1, 2].forEach((i) => {
+  const t = L.query + (2 - i) * 0.09;
+  loop(`hs-flash-${i}`, [
+    [0, "opacity:0"],
+    [t, "opacity:0", "ease-out"],
+    [t + 0.17, "opacity:0.85", "ease-out"],
+    [t + 0.5, "opacity:0"],
+    [P, "opacity:0"],
+  ]);
+});
+
+// Le curseur descend la page de code.
+loop("hs-sweep", [
+  [0, "opacity:0;transform:translateY(0)"],
+  [L.sweep - 0.05, "opacity:0;transform:translateY(0)"],
+  [L.sweep, "opacity:1;transform:translateY(0)"],
+  [L.sweep + 0.36, "opacity:1;transform:translateY(1.11px)"],
+  [L.sweep + 0.42, "opacity:0;transform:translateY(1.11px)"],
+  [P, "opacity:0;transform:translateY(1.11px)"],
+]);
+
+// Le graphique monte, puis se range.
+bars.forEach((_, i) => {
+  const t = L.bars + i * 0.07;
+  loop(`hs-bar-${i}`, [
+    [0, "transform:scaleY(0)"],
+    [t, "transform:scaleY(0)", OUT],
+    [t + 0.45, "transform:scaleY(1)"],
+    [resetStart, "transform:scaleY(1)", DOWN],
+    [resetEnd, "transform:scaleY(0)"],
+    [P, "transform:scaleY(0)"],
+  ]);
+});
+
+// La prochaine étape prend corps à l'arrivée du point.
+const arrive = L.hops[3][1];
+loop("hs-cube", [
+  [0, "opacity:0.4"],
+  [arrive, "opacity:0.4", OUT],
+  [arrive + 0.24, "opacity:1"],
+  [resetStart, "opacity:1", "ease-in-out"],
+  [resetEnd, "opacity:0.4"],
+  [P, "opacity:0.4"],
+]);
+loop("hs-ring", [
+  [0, "opacity:0;transform:scale(1)"],
+  [L.ring, "opacity:0.7;transform:scale(1)", OUT],
+  [L.ring + 0.9, "opacity:0;transform:scale(2.6)"],
+  [P, "opacity:0;transform:scale(2.6)"],
+]);
+
+// L'accolade I2M se trace quand le point a parcouru les trois étapes.
+const hidden = "clip-path:inset(-1em 100% -1em 0)";
+const shown = "clip-path:inset(-1em 0 -1em 0)";
+loop("hs-bracket", [
+  [0, `${hidden};opacity:1`],
+  [L.bracket, `${hidden};opacity:1`, "cubic-bezier(0.65, 0, 0.35, 1)"],
+  [L.bracket + 0.7, `${shown};opacity:1`],
+  [resetStart, `${shown};opacity:1`, "ease-in"],
+  [resetEnd, `${shown};opacity:0`],
+  [P, `${shown};opacity:0`],
+]);
+
+// Les filets de la légende : bleu à l'arrivée du point, noir une fois l'étape passée.
+const order = ["base", "data", "code", "ui", "next"] as const;
+order.forEach((key, i) => {
+  const on = lit[key];
+  const off = i < order.length - 1 ? lit[order[i + 1]] : undefined;
+  const accent = "background-color:var(--accent)";
+  const ink = "background-color:var(--ink)";
+  const frames: Frame[] = [
+    [0, `transform:scaleX(0);${accent}`],
+    [on, `transform:scaleX(0);${accent}`, OUT],
+    [on + 0.4, `transform:scaleX(1);${accent}`],
+  ];
+  if (off !== undefined) frames.push([off, `transform:scaleX(1);${accent}`, "ease"], [off + 0.4, `transform:scaleX(1);${ink}`]);
+  const color = off !== undefined ? ink : accent;
+  frames.push([resetStart, `transform:scaleX(1);${color}`, DOWN], [resetEnd, `transform:scaleX(0);${color}`], [P, `transform:scaleX(0);${color}`]);
+  if (frames[0][0] === frames[1][0]) frames.shift();
+  loop(`hs-leg-${key}`, frames, `.hs-leg-${key}::after`);
+});
+
+/* L'image fixe (mouvement réduit) est la fin du parcours : le point posé
+   sur la prochaine étape. */
+const loopCss = `
+.hs-dot-x{transform:translateX(${last[0]}px)}
+.hs-dot-y{transform:translateY(${last[1]}px)}
+.hs-dot-shadow{transform:translate(${last[0]}px,${last[1]}px)}
+@media (prefers-reduced-motion:no-preference){${loops.join("")}}
 `.replace(/\n/g, "");
 
 const delay = (seconds: number) => `--d: ${n(seconds)}s`;
 const steps = heroScene.steps.map((step, i) => ({ ...step, number: `0${i + 1}` }));
+const legendClass = (key: keyof typeof lit) => `hs-leg-${key}`;
 ---
 
 <div class="scene" data-scene>
   <div class="scene__art" style={`--ratio: ${n(VIEW.w / VIEW.h)}`}>
-    <div class="scene__canvas hs-clock" data-scene-canvas>
+    <div class="scene__canvas" data-scene-canvas>
       <svg class="scene__svg" viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`} aria-hidden="true" focusable="false">
         <defs>
           <!-- La trajectoire du point, calculée au build. -->
-          <style set:html={dotCss}></style>
+          <style set:html={loopCss}></style>
           <clipPath id="scene-slab-top"><path d={slab.top}></path></clipPath>
           <linearGradient id="scene-cylinder" x1="0" x2="1" y1="0" y2="0">
             <stop offset="0" class="stop-light"></stop>
@@ -333,7 +430,7 @@ const steps = heroScene.steps.map((step, i) => ({ ...step, number: `0${i + 1}` }
               discs.map((d, i) => (
                 <g>
                   <path class="f-cylinder" d={d.side} />
-                  <path class="flash a-flash" style={delay(T.query + (2 - i) * 0.09)} d={d.side} />
+                  <path class={`flash hs-flash-${i}`} d={d.side} />
                   <ellipse class="f-top" cx={d.top.cx} cy={d.top.cy} rx={d.top.rx} ry={d.top.ry} />
                 </g>
               ))
@@ -351,7 +448,7 @@ const steps = heroScene.steps.map((step, i) => ({ ...step, number: `0${i + 1}` }
               <rect class="code-bg" x="0.08" y="0.08" width="1.74" height="1.74" rx="0.06"></rect>
               <rect class="code-bar" x="0.08" y="0.08" width="1.74" height="0.24"></rect>
               {[0.2, 0.32, 0.44].map((x) => <circle class="code-dot" cx={x} cy="0.2" r="0.04" />)}
-              <rect class="code-cursor a-sweep" style={delay(T.sweep)} x="0.12" y={n(0.46 - 0.05)} width="1.66" height="0.17" rx="0.03"></rect>
+              <rect class="code-cursor hs-sweep" x="0.12" y={n(0.46 - 0.05)} width="1.66" height="0.17" rx="0.03"></rect>
               {codeRects.map((r) => <rect class={`code-${r.kind}`} x={r.x} y={r.y} width={r.width} height="0.07" rx="0.035" />)}
             </g>
           </g>
@@ -381,7 +478,7 @@ const steps = heroScene.steps.map((step, i) => ({ ...step, number: `0${i + 1}` }
               <rect class="ui-line" x="0.15" y="0.62" width="0.38" height="0.03"></rect>
               <circle class="ui-knob" cx="0.4" cy="0.635" r="0.05"></circle>
               <rect class="ui-axis" x="0.76" y="0.2" width="1.45" height="0.02"></rect>
-              {bars.map((bar, i) => <rect class={`ui-col a-grow${bar.accent ? " is-accent" : ""}`} style={delay(T.bars + i * 0.07)} x={bar.x} y="0.22" width="0.16" height={bar.height} />)}
+              {bars.map((bar, i) => <rect class={`ui-col hs-bar-${i}${bar.accent ? " is-accent" : ""}`} x={bar.x} y="0.22" width="0.16" height={bar.height} />)}
             </g>
           </g>
         </g>
@@ -390,7 +487,7 @@ const steps = heroScene.steps.map((step, i) => ({ ...step, number: `0${i + 1}` }
         <g data-key="next" data-lift="22">
           <g class="a-fade" style={delay(T.objects.next)}>
             <path class="ghost-ground" d={cubeGround}></path>
-            <g class="a-arrive" style={delay(T.arrive)}>
+            <g class="hs-cube">
               <path class="ghost-fill" d={cube.top}></path>
               <path class="ghost-fill ghost-fill--l" d={cube.left}></path>
               <path class="ghost-fill ghost-fill--r" d={cube.right}></path>
@@ -417,7 +514,7 @@ const steps = heroScene.steps.map((step, i) => ({ ...step, number: `0${i + 1}` }
         <ellipse class="dot-shadow hs-dot-shadow" cx="0" cy="0" rx={n(R * 1.1)} ry={n(R * 0.45)}></ellipse>
         <g class="hs-dot-x">
           <g class="hs-dot-y">
-            <circle class="dot-ring a-ring" style={delay(T.arrive + 0.15)} cx="0" cy={-R} r={R}></circle>
+            <circle class="dot-ring hs-ring" cx="0" cy={-R} r={R}></circle>
             <circle class="dot hs-dot-body" cx="0" cy={-R} r={R}></circle>
           </g>
         </g>
@@ -433,27 +530,22 @@ const steps = heroScene.steps.map((step, i) => ({ ...step, number: `0${i + 1}` }
         }
         <span class="scene__num a-fade" data-key="base" style={`${pct([baseCallout[0], baseCallout[1] + 16])}; ${delay(T.logo + 0.2)}`}>00</span>
       </div>
-
-      <button class="scene__replay" type="button" data-scene-replay hidden>
-        <Icon name="replay" />
-        Rejouer
-      </button>
     </div>
   </div>
 
   <div class="legend">
-    <p class="legend__bracket a-reveal" data-key="i2m" style={delay(T.bracket)}>
+    <p class="legend__bracket hs-bracket" data-key="i2m">
       <strong>{heroScene.experience.title}</strong>
       {heroScene.experience.detail}
     </p>
     <ul class="legend__list">
-      <li class="legend__item legend__item--base a-rise" data-key="base" style={`${visit("base")}; ${delay(T.legend)}`}>
+      <li class={`legend__item legend__item--base a-rise ${legendClass("base")}`} data-key="base" style={delay(T.legend)}>
         <span class="legend__title"><span class="legend__num" aria-hidden="true">00</span>{heroScene.base.title}</span>
         {heroScene.base.lines.map((line) => <span class="legend__detail">{line}</span>)}
       </li>
       {
         steps.map((step, i) => (
-          <li class="legend__item legend__item--step a-rise" data-key={step.key} style={`${visit(step.key)}; ${delay(T.legend + 0.08 * (i + 1))}`}>
+          <li class={`legend__item legend__item--step a-rise ${legendClass(step.key)}`} data-key={step.key} style={delay(T.legend + 0.08 * (i + 1))}>
             <span class="legend__title">
               <span class="legend__num" aria-hidden="true">{step.number}</span>
               {step.title}
@@ -462,7 +554,7 @@ const steps = heroScene.steps.map((step, i) => ({ ...step, number: `0${i + 1}` }
           </li>
         ))
       }
-      <li class="legend__item legend__item--next a-rise" data-key="next" style={`${visit("next")}; ${delay(T.legend + 0.32)}`}>
+      <li class={`legend__item legend__item--next a-rise ${legendClass("next")}`} data-key="next" style={delay(T.legend + 0.32)}>
         <span class="legend__title"><span class="legend__num" aria-hidden="true">04</span>{heroScene.next.title}</span>
         <span class="legend__detail">{heroScene.next.detail}</span>
         <span class="legend__tag">Prochaine étape</span>
@@ -652,6 +744,8 @@ const steps = heroScene.steps.map((step, i) => ({ ...step, number: `0${i + 1}` }
 
   .ui-col {
     fill: color-mix(in srgb, var(--ink) 72%, transparent);
+    transform-box: fill-box;
+    transform-origin: 50% 0%;
   }
 
   .ui-col.is-accent {
@@ -732,26 +826,6 @@ const steps = heroScene.steps.map((step, i) => ({ ...step, number: `0${i + 1}` }
     font-size: clamp(0.625rem, 1.9cqi, 0.75rem);
     line-height: 1;
     color: var(--accent);
-  }
-
-  .scene__replay {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.35rem 0;
-    border: 0;
-    background: none;
-    font-family: var(--font-mono);
-    font-size: var(--fs-label);
-    color: var(--muted);
-    transition: color var(--dur-fast);
-  }
-
-  .scene__replay:hover {
-    color: var(--ink);
   }
 
   /* ---------- La légende ----------
@@ -954,8 +1028,9 @@ const steps = heroScene.steps.map((step, i) => ({ ...step, number: `0${i + 1}` }
   }
 
   /* ---------- Animation ----------
-     Avec JavaScript, tout attend sur la première image tant que la scène
-     n'est pas à l'écran ; une fois jouée, elle garde son état final. */
+     L'entrée se joue une fois (ci-dessous) ; la boucle du point est générée
+     dans le frontmatter. Avec JavaScript, tout attend sur la première image
+     tant que la scène n'est pas à l'écran, et se met en pause au survol. */
   @media (prefers-reduced-motion: no-preference) {
     .a-rise {
       animation: scene-rise calc(0.7s * var(--speed, 1)) var(--ease-out) calc(var(--d) * var(--speed, 1)) both;
@@ -974,50 +1049,9 @@ const steps = heroScene.steps.map((step, i) => ({ ...step, number: `0${i + 1}` }
       animation: scene-draw calc(0.45s * var(--speed, 1)) var(--ease-out) calc(var(--d) * var(--speed, 1)) both;
     }
 
-    .a-flash {
-      animation: scene-flash calc(0.5s * var(--speed, 1)) ease-out calc(var(--d) * var(--speed, 1)) both;
-    }
-
-    .a-sweep {
-      animation: scene-sweep calc(0.4s * var(--speed, 1)) linear calc(var(--d) * var(--speed, 1)) both;
-    }
-
-    .a-grow {
-      transform-box: fill-box;
-      transform-origin: 50% 0%;
-      animation: scene-grow calc(0.45s * var(--speed, 1)) var(--ease-out) calc(var(--d) * var(--speed, 1)) both;
-    }
-
-    .a-arrive {
-      animation: scene-arrive calc(0.6s * var(--speed, 1)) var(--ease-out) calc(var(--d) * var(--speed, 1)) both;
-    }
-
-    .a-ring {
-      animation: scene-ring calc(0.9s * var(--speed, 1)) var(--ease-out) calc(var(--d) * var(--speed, 1)) both;
-    }
-
-    .a-reveal {
-      animation: scene-reveal calc(0.7s * var(--speed, 1)) var(--ease-in-out) calc(var(--d) * var(--speed, 1)) both;
-    }
-
-    .legend__item::after {
-      animation:
-        legend-fill calc(0.45s * var(--speed, 1)) var(--ease-out) calc(var(--on) * var(--speed, 1)) both,
-        legend-cool calc(0.5s * var(--speed, 1)) ease calc(var(--off) * var(--speed, 1)) both;
-    }
-
-    .legend__item--next::after {
-      animation: legend-fill calc(0.45s * var(--speed, 1)) var(--ease-out) calc(var(--on) * var(--speed, 1)) both;
-    }
-
-    :global(html.js) .scene:not([data-state="play"]):not([data-state="done"]) *,
-    :global(html.js) .scene:not([data-state="play"]):not([data-state="done"]) *::after {
+    :global(html.js) .scene:not([data-state="play"]) *,
+    :global(html.js) .scene:not([data-state="play"]) *::after {
       animation-play-state: paused;
-    }
-
-    .scene[data-state="done"] *,
-    .scene[data-state="done"] *::after {
-      animation: none;
     }
   }
 
@@ -1050,82 +1084,6 @@ const steps = heroScene.steps.map((step, i) => ({ ...step, number: `0${i + 1}` }
     }
     to {
       stroke-dashoffset: 0;
-    }
-  }
-
-  @keyframes scene-flash {
-    0% {
-      opacity: 0;
-    }
-    35% {
-      opacity: 0.85;
-    }
-    100% {
-      opacity: 0;
-    }
-  }
-
-  /* Le curseur descend la page de code, ligne par ligne. */
-  @keyframes scene-sweep {
-    0% {
-      opacity: 1;
-      transform: translateY(0);
-    }
-    90% {
-      opacity: 1;
-      transform: translateY(1.11px);
-    }
-    100% {
-      opacity: 0;
-      transform: translateY(1.11px);
-    }
-  }
-
-  @keyframes scene-grow {
-    from {
-      transform: scaleY(0);
-    }
-  }
-
-  /* À l'arrivée du point, le bloc en pointillés prend corps. */
-  @keyframes scene-arrive {
-    from {
-      opacity: 0.4;
-    }
-    40% {
-      opacity: 1;
-    }
-  }
-
-  @keyframes scene-ring {
-    from {
-      opacity: 0.7;
-      transform: scale(1);
-    }
-    to {
-      opacity: 0;
-      transform: scale(2.6);
-    }
-  }
-
-  @keyframes scene-reveal {
-    from {
-      clip-path: inset(-1em 100% -1em 0);
-    }
-    to {
-      clip-path: inset(-1em 0 -1em 0);
-    }
-  }
-
-  @keyframes legend-fill {
-    from {
-      transform: scaleX(0);
-    }
-  }
-
-  @keyframes legend-cool {
-    from {
-      background: var(--accent);
     }
   }
 </style>
