@@ -1,9 +1,9 @@
 ---
 /* La maquette de l'accueil : le parcours en une vue isométrique.
-   Un socle gravé Epitech porte la chaîne de travail (une base de données, un
-   éditeur, une interface) ; un point bleu, celui du logo et du nom, la
-   parcourt de la requête à l'interface, puis rejoint la prochaine étape :
-   l'alternance 2027, encore en pointillés.
+   Un socle gravé Epitech porte cinq stations, une par étape de la légende :
+   le podium Epitech, une base de données, un éditeur, un écran, et hors du
+   socle la prochaine étape (l'alternance 2027, encore en pointillés). Un
+   point bleu, celui du logo et du nom, saute de l'une à l'autre.
 
    Tout est calculé au build : une vraie projection 3D (dimétrique 2:1)
    rendue en SVG. Aucune bibliothèque, aucune image, net à toutes les tailles
@@ -97,17 +97,31 @@ const LOGO_H = 0.56;
 const logoScale = LOGO_H / 44.102;
 const logoTransform = `${onLeft(0, 7, -1.2)} translate(${n((7 - 177.648 * logoScale) / 2)} ${n((1.2 + LOGO_H) / 2)}) scale(${logoScale} ${-logoScale})`;
 
+/* Cinq stations sur la diagonale du socle, une par étape de la légende,
+   à intervalles réguliers : chaque objet a sa propre animation. */
+
+// 00 · Epitech : un podium à deux marches, une par cursus (Digital School,
+// puis Pré-MSc). Le point y prend son départ.
+const PD = { x: 0.9, y: 6.1 };
+const tiers = [
+  box(0.35, 1.45, 5.55, 6.65, 0, 0.3),
+  box(0.55, 1.25, 5.75, 6.45, 0.3, 0.6),
+];
+const PD_H = 0.6;
+
 // 01 · La base de données : trois disques.
-const DB = { x: 1.35, y: 5.65, r: 0.9, h: 1.28 };
+const DB = { x: 2.45, y: 4.55, r: 0.8, h: 1.14 };
 const discs = [
-  [0, 0.38],
-  [0.45, 0.83],
-  [0.9, 1.28],
+  [0, 0.34],
+  [0.4, 0.74],
+  [0.8, 1.14],
 ].map(([z0, z1]) => disc(DB.x, DB.y, DB.r, z0, z1));
 
-// 02 · L'éditeur : un bloc dont le dessus est une page de code.
-const ED = { x0: 2.55, x1: 4.45, y0: 2.55, y1: 4.45, h: 0.5 };
+// 02 · L'éditeur : un bloc dont le dessus est une page de code
+// (dessinée sur 1,9 unité, ramenée à la taille du bloc).
+const ED = { x0: 3.45, x1: 5.05, y0: 1.95, y1: 3.55, h: 0.45 };
 const editor = box(ED.x0, ED.x1, ED.y0, ED.y1, 0, ED.h);
+const edScale = n((ED.x1 - ED.x0) / 1.9);
 const LINE_STEP = 0.185;
 const codeLines: [number, [number, "k" | "t" | "s"][]][] = [
   [0, [[0.34, "k"], [0.62, "t"]]],
@@ -127,10 +141,14 @@ const codeRects = codeLines.flatMap(([indent, tokens], line) => {
   });
 });
 
-// 03 · L'interface : un écran debout, tourné vers la chaîne.
-const SC = { x0: 4.5, x1: 6.9, y0: 1.0, y1: 1.2, z0: 0.2, z1: 1.9 };
-const plinth = box(5.3, 6.1, 0.75, 1.55, 0, 0.2);
-const panel = box(SC.x0, SC.x1, SC.y0, SC.y1, SC.z0, SC.z1);
+// 03 · L'interface : un écran debout, tourné vers la chaîne
+// (dessiné sur 2,4 unités, ramené à la largeur de l'écran).
+const SC = { x0: 5.0, x1: 7.0, y0: 0.8, y1: 1.0, z0: 0.2 };
+const scScale = n((SC.x1 - SC.x0) / 2.4);
+const SC_TOP = n(SC.z0 + 1.7 * scScale);
+const PL = { x0: 5.6, x1: 6.4, y0: 0.55, y1: 1.25 };
+const plinth = box(PL.x0, PL.x1, PL.y0, PL.y1, 0, SC.z0);
+const panel = box(SC.x0, SC.x1, SC.y0, SC.y1, SC.z0, SC_TOP);
 const bars = [0.36, 0.6, 0.46, 0.82, 1.0].map((height, i) => ({ x: n(0.84 + i * 0.27), height, accent: i === 4 }));
 
 // 04 · La prochaine étape : un bloc en pointillés, hors du socle.
@@ -162,18 +180,21 @@ const cubeEdges = (() => {
 const cubeGround = face([CU.x0, CU.y0, 0], [CU.x1, CU.y0, 0], [CU.x1, CU.y1, 0], [CU.x0, CU.y1, 0]);
 
 const shadows = [
+  shadow(rectFootprint(0.35, 1.45, 5.55, 6.65), PD_H),
   shadow(circleFootprint(DB.x, DB.y, DB.r), DB.h),
   shadow(rectFootprint(ED.x0, ED.x1, ED.y0, ED.y1), ED.h),
-  shadow(rectFootprint(SC.x0, SC.x1, SC.y0, SC.y1), SC.z1),
-  shadow(rectFootprint(5.3, 6.1, 0.75, 1.55), 0.2),
+  shadow(rectFootprint(SC.x0, SC.x1, SC.y0, SC.y1), SC_TOP),
+  shadow(rectFootprint(PL.x0, PL.x1, PL.y0, PL.y1), SC.z0),
 ];
 
 /* ---------- Le point ---------- */
 const R = n(0.36 * K);
 const stops = {
+  base: iso(PD.x, PD.y, PD_H),
   data: iso(DB.x, DB.y, DB.h),
   code: iso((ED.x0 + ED.x1) / 2, (ED.y0 + ED.y1) / 2, ED.h),
-  ui: iso(5.5, 2.15, 0),
+  // Devant l'écran, à sa gauche : le point ne cache pas le graphique.
+  ui: iso(5.3, 1.6, 0),
   next: iso((CU.x0 + CU.x1) / 2, (CU.y0 + CU.y1) / 2, CU.z1),
 };
 
@@ -181,15 +202,16 @@ const stops = {
 const VIEW = { x: -250, y: -14, w: 595, h: 282 };
 const pct = ([x, y]: Point) => `--x: ${n(((x - VIEW.x) / VIEW.w) * 100)}; --y: ${n(((y - VIEW.y) / VIEW.h) * 100)}`;
 
-/* Chaque repère : un numéro au-dessus de l'objet, relié par un trait court. */
-type StepKey = "data" | "code" | "ui" | "next";
+/* Chaque repère : un numéro sur une même ligne, relié à son objet par un trait. */
+type StepKey = "base" | "data" | "code" | "ui" | "next";
+const CALLOUT_Y = 4;
 const callouts: { key: StepKey; number: string; at: Point; to: number }[] = [
-  { key: "data", number: "01", at: [stops.data[0], 24], to: n(stops.data[1] - DB.r * Math.SQRT2 * (K / 2) - 5) },
-  { key: "code", number: "02", at: [0, 38], to: n(iso(ED.x0, ED.y0, ED.h)[1] - 5) },
-  { key: "ui", number: "03", at: [iso(5.7, SC.y0, SC.z1)[0], 12], to: n(iso(5.7, SC.y0, SC.z1)[1] - 5) },
-  { key: "next", number: "04", at: [iso(CU.x0, CU.y0, CU.z1)[0], 0], to: n(iso(CU.x0, CU.y0, CU.z1)[1] - 5) },
+  { key: "base", number: "00", at: [iso(0.55, 5.75, PD_H)[0], CALLOUT_Y], to: n(iso(0.55, 5.75, PD_H)[1] - 5) },
+  { key: "data", number: "01", at: [stops.data[0], CALLOUT_Y], to: n(stops.data[1] - DB.r * Math.SQRT2 * (K / 2) - 5) },
+  { key: "code", number: "02", at: [iso(ED.x0, ED.y0, ED.h)[0], CALLOUT_Y], to: n(iso(ED.x0, ED.y0, ED.h)[1] - 5) },
+  { key: "ui", number: "03", at: [iso(6.0, SC.y0, SC_TOP)[0], CALLOUT_Y], to: n(iso(6.0, SC.y0, SC_TOP)[1] - 5) },
+  { key: "next", number: "04", at: [iso(CU.x0, CU.y0, CU.z1)[0], CALLOUT_Y], to: n(iso(CU.x0, CU.y0, CU.z1)[1] - 5) },
 ];
-const baseCallout = iso(3.5, 7, -1.2);
 
 /* ---------- Le temps ----------
    L'entrée (socle, objets, légende) se joue une fois, multipliée par
@@ -200,32 +222,39 @@ const T = {
   slab: 0.1,
   logo: 0.55,
   legend: 0.45,
-  objects: { data: 0.6, code: 0.72, ui: 0.84, next: 0.96 },
-  callouts: { data: 0.95, code: 1.03, ui: 1.11, next: 1.19 },
+  objects: { base: 0.48, data: 0.6, code: 0.72, ui: 0.84, next: 0.96 },
+  callouts: { base: 0.87, data: 0.95, code: 1.03, ui: 1.11, next: 1.19 },
 };
 const LOOP_START = 1.35; // secondes, multipliées par --speed
 const P = 6.6; // période de la boucle, en secondes
+/* Un rythme régulier : le point apparaît sur le podium, puis chaque saut dure
+   0,4 s et chaque arrêt 0,45 s ; le dernier saut, vers la prochaine étape,
+   est un peu plus ample. L'objet visité réagit dès l'arrivée du point. */
+const POP = 0.3;
+const HOP = 0.4;
+const REST = 0.45;
+const hops: [number, number][] = [];
+for (let i = 0, t = POP + REST; i < 4; i++) {
+  const length = i === 3 ? HOP + 0.15 : HOP;
+  hops.push([n(t), n(t + length)]);
+  t += length + REST;
+}
+const arrivals = { base: 0, data: hops[0][1], code: hops[1][1], ui: hops[2][1], next: hops[3][1] };
 const L = {
-  pop: 0.3, // le point sort du socle
-  hops: [
-    [0.5, 0.9],
-    [1.35, 1.75],
-    [2.15, 2.55],
-    [3.0, 3.55],
-  ],
-  query: 0.95,
-  sweep: 1.75,
-  bars: 2.55,
-  ring: 3.7,
+  hops,
+  climb: 0.12, // les marches du podium s'allument
+  query: arrivals.data + 0.05,
+  sweep: arrivals.code + 0.05,
+  bars: arrivals.ui + 0.05,
+  ring: arrivals.next + 0.15,
   reset: [5.7, 6.1], // tout se range avant le tour suivant
 };
 // Chaque étape de la légende s'allume à l'arrivée du point, s'éteint à la suivante.
-const lit = { base: 0, data: 0.9, code: 1.75, ui: 2.55, next: 3.55 };
+const lit = arrivals;
 
-/* Le point part du socle, devant la base de données. */
-const origin = iso(2.4, 6.4, 0);
-const route = [origin, stops.data, stops.code, stops.ui, stops.next];
-const lifts = [26, 34, 30, 45];
+const route = [stops.base, stops.data, stops.code, stops.ui, stops.next];
+const origin = route[0];
+const lifts = [30, 30, 30, 40];
 
 const pc = (t: number) => `${Math.round((t / P) * 100000) / 1000}%`;
 const UP = "cubic-bezier(0.33, 1, 0.68, 1)";
@@ -247,11 +276,11 @@ const xs: Frame[] = [[0, `transform:translateX(${origin[0]}px)`]];
 const ys: Frame[] = [[0, `transform:translateY(${origin[1]}px)`]];
 const squash: [number, string, string?][] = [
   [0, "scale(0)", OUT],
-  [L.pop, "scale(1)"],
+  [POP, "scale(1)"],
 ];
 const shade: Frame[] = [
   [0, `opacity:0;transform:translate(${origin[0]}px,${origin[1]}px) scale(0.3)`, OUT],
-  [L.pop, `opacity:1;transform:translate(${origin[0]}px,${origin[1]}px) scale(1)`],
+  [POP, `opacity:1;transform:translate(${origin[0]}px,${origin[1]}px) scale(1)`],
 ];
 L.hops.forEach(([start, stop], i) => {
   const [from, to] = [route[i], route[i + 1]];
@@ -291,6 +320,25 @@ loop("hs-dot-x", xs);
 loop("hs-dot-y", ys);
 loop("hs-dot-body", squash.sort((a, b) => a[0] - b[0]).map(([t, s, ease]) => [t, `transform:${s}`, ease]));
 loop("hs-dot-shadow", shade);
+
+// Le podium Epitech s'allume, marche par marche, et le logo gravé passe en bleu.
+tiers.forEach((_, i) => {
+  const t = L.climb + i * 0.14;
+  loop(`hs-tier-${i}`, [
+    [0, "opacity:0"],
+    [t, "opacity:0", "ease-out"],
+    [t + 0.17, "opacity:0.85", "ease-out"],
+    [t + 0.55, "opacity:0"],
+    [P, "opacity:0"],
+  ]);
+});
+loop("hs-logo", [
+  [0, "fill:var(--iso-engrave)", "ease-out"],
+  [0.25, "fill:var(--accent)"],
+  [arrivals.data, "fill:var(--accent)", "ease-out"],
+  [arrivals.data + 0.3, "fill:var(--iso-engrave)"],
+  [P, "fill:var(--iso-engrave)"],
+]);
 
 // La base de données s'interroge, disque par disque, du haut vers le bas.
 [0, 1, 2].forEach((i) => {
@@ -421,16 +469,34 @@ const legendClass = (key: keyof typeof lit) => `hs-leg-${key}`;
             <path class="grid" d={slabGrid}></path>
             <path class="f-left" d={slab.left}></path>
             <path class="f-right" d={slab.right}></path>
-            <path class="logo a-fade" style={delay(T.logo)} transform={logoTransform} d={logoPath}></path>
+            <g class="logo hs-logo"><path class="a-fade" style={delay(T.logo)} transform={logoTransform} d={logoPath}></path></g>
           </g>
         </g>
 
         <!-- Ombres portées -->
         <g clip-path="url(#scene-slab-top)">
-          <path class="cast a-fade" style={delay(T.objects.data + 0.3)} d={shadows[0]}></path>
-          <path class="cast a-fade" style={delay(T.objects.code + 0.3)} d={shadows[1]}></path>
-          <path class="cast a-fade" style={delay(T.objects.ui + 0.3)} d={shadows[2]}></path>
+          <path class="cast a-fade" style={delay(T.objects.base + 0.3)} d={shadows[0]}></path>
+          <path class="cast a-fade" style={delay(T.objects.data + 0.3)} d={shadows[1]}></path>
+          <path class="cast a-fade" style={delay(T.objects.code + 0.3)} d={shadows[2]}></path>
           <path class="cast a-fade" style={delay(T.objects.ui + 0.3)} d={shadows[3]}></path>
+          <path class="cast a-fade" style={delay(T.objects.ui + 0.3)} d={shadows[4]}></path>
+        </g>
+
+        <!-- 00 · Podium Epitech -->
+        <g data-key="base" data-lift="4">
+          <g class="a-drop" style={delay(T.objects.base)}>
+            {
+              tiers.map((tier, i) => (
+                <g>
+                  <path class="f-top" d={tier.top} />
+                  <path class="f-left" d={tier.left} />
+                  <path class="f-right" d={tier.right} />
+                  <path class={`flash hs-tier-${i}`} d={tier.left} />
+                  <path class={`flash hs-tier-${i}`} d={tier.right} />
+                </g>
+              ))
+            }
+          </g>
         </g>
 
         <!-- 01 · Base de données -->
@@ -454,7 +520,7 @@ const legendClass = (key: keyof typeof lit) => `hs-leg-${key}`;
             <path class="f-top" d={editor.top}></path>
             <path class="f-left" d={editor.left}></path>
             <path class="f-right" d={editor.right}></path>
-            <g transform={onTop(ED.x0, ED.y0, ED.h)}>
+            <g transform={`${onTop(ED.x0, ED.y0, ED.h)} scale(${edScale})`}>
               <rect class="code-bg" x="0.08" y="0.08" width="1.74" height="1.74" rx="0.06"></rect>
               <rect class="code-bar" x="0.08" y="0.08" width="1.74" height="0.24"></rect>
               {[0.2, 0.32, 0.44].map((x) => <circle class="code-dot" cx={x} cy="0.2" r="0.04" />)}
@@ -473,7 +539,7 @@ const legendClass = (key: keyof typeof lit) => `hs-leg-${key}`;
             <path class="f-top" d={panel.top}></path>
             <path class="f-left" d={panel.left}></path>
             <path class="f-right" d={panel.right}></path>
-            <g transform={onLeft(SC.x0, SC.y1, SC.z0)}>
+            <g transform={`${onLeft(SC.x0, SC.y1, SC.z0)} scale(${scScale})`}>
               <rect class="ui-glass" x="0.07" y="0.07" width="2.26" height="1.56"></rect>
               <rect class="ui-bar" x="0.07" y="1.42" width="2.26" height="0.21"></rect>
               {[0.18, 0.3, 0.42].map((x) => <circle class="ui-dot" cx={x} cy="1.525" r="0.038" />)}
@@ -538,7 +604,6 @@ const legendClass = (key: keyof typeof lit) => `hs-leg-${key}`;
             </span>
           ))
         }
-        <span class="scene__num a-fade" data-key="base" style={`${pct([baseCallout[0], baseCallout[1] + 16])}; ${delay(T.logo + 0.2)}`}>00</span>
       </div>
     </div>
   </div>
