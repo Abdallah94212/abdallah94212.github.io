@@ -93,7 +93,7 @@ export const journey: JourneyItem[] = [
     kind: "Distinction",
     title: "Prix national TF1",
     place: "Lauréat, au niveau national",
-    text: "Catégorie Sécurité & Confidentialité.",
+    text: "Concours national\u00a0: concevoir une page de confidentialité conforme au RGPD, gestion des cookies comprise, du contenu jusqu’au design. Catégorie Sécurité\u00a0& Confidentialité.",
   },
   {
     when: "Janv. - juin 2026",
