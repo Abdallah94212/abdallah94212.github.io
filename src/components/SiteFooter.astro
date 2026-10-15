@@ -14,6 +14,8 @@ const year = new Date().getFullYear();
         <li><a href={url("/#projets")}>Projets</a></li>
         <li><a href={url("/#parcours")}>Parcours</a></li>
         <li><a href={url("/#competences")}>Compétences</a></li>
+      </ul>
+      <ul>
         <li><a href={url("/#contact")}>Contact</a></li>
         <li><a href={url("/cv/")}>CV</a></li>
       </ul>
@@ -92,9 +94,35 @@ const year = new Date().getFullYear();
     color: var(--muted);
   }
 
+  /* Téléphone : le monogramme plus petit, les liens sur trois colonnes de
+     trois lignes au plus, sur toute la largeur. */
   @media (max-width: 720px) {
+    .site-footer {
+      padding-top: 3rem;
+    }
+
     .site-footer__grid {
       grid-template-columns: 1fr;
+      gap: 1.75rem;
+    }
+
+    .site-footer__mark {
+      font-size: 3.75rem;
+    }
+
+    .site-footer__nav {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1rem;
+      padding-bottom: 0;
+    }
+
+    .site-footer__nav ul {
+      gap: 0.5rem;
+    }
+
+    .site-footer__bottom {
+      margin-top: 2rem;
     }
   }
 </style>
