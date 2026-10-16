@@ -7,7 +7,7 @@ export const profile = {
   lastName: "Borji",
   role: "Étudiant en Pré-MSc à Epitech",
   kicker: ["Pré-MSc à Epitech", "Développement, data et web"],
-  statement: "Je développe des applications data et des sites web, de la requête SQL à l’interface.",
+  statement: "J’analyse les données, je conçois des interfaces et je développe des solutions adaptées aux besoins.",
   manifesto:
     "J’ai encore beaucoup à découvrir, et c’est précisément ce qui me motive. Je recherche une alternance de janvier à août 2027 pour continuer à progresser, apprendre des autres et participer à des projets concrets.",
   email: "abdallah.borji@epitech.eu",
