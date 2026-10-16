@@ -12,6 +12,7 @@
   --line-strong: #b5bac5;
   --accent: #2a45f2;
   --accent-ink: #f5f6f8;
+  --danger: #c42f2f;
   --shadow: 0 30px 60px -30px rgb(12 14 19 / 35%);
 
   --font-sans: "Mona Sans Variable", "Helvetica Neue", Arial, sans-serif;
@@ -55,6 +56,7 @@
   --line-strong: #3d414c;
   --accent: #8094ff;
   --accent-ink: #0b0c10;
+  --danger: #ff8577;
   --shadow: 0 30px 60px -30px rgb(0 0 0 / 70%);
 }
 
@@ -70,6 +72,7 @@
     --line-strong: #3d414c;
     --accent: #8094ff;
     --accent-ink: #0b0c10;
+    --danger: #ff8577;
     --shadow: 0 30px 60px -30px rgb(0 0 0 / 70%);
   }
 }

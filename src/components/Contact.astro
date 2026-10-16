@@ -1,6 +1,12 @@
 ---
 import Icon from "./Icon.astro";
 import { profile } from "../data/profile";
+
+/* Le formulaire passe par Web3Forms : le site n'a pas de serveur pour envoyer
+   un e-mail. La clé est publique par conception : elle ne permet que de
+   m'écrire, à l'adresse enregistrée chez eux (voir leur FAQ). */
+const formEndpoint = "https://api.web3forms.com/submit";
+const formKey = "6ca42dd5-b9b1-402e-b0b4-ad459d13f8de";
 ---
 
 <section class="contact" id="contact" aria-labelledby="contact-title">
@@ -36,31 +42,39 @@ import { profile } from "../data/profile";
         </div>
       </dl>
 
-      <form class="contact-form" data-contact-form action={`mailto:${profile.email}`} method="post" enctype="text/plain">
+      <form class="contact-form" data-contact-form data-recipient={profile.email} action={formEndpoint} method="post">
+        <input type="hidden" name="access_key" value={formKey} />
+        <input type="hidden" name="from_name" value="Portfolio" />
+        <!-- Piège à robots : caché, un visiteur ne le coche jamais. -->
+        <input type="checkbox" name="botcheck" tabindex="-1" hidden />
         <div class="field">
           <label for="contact-name">Votre nom</label>
-          <input id="contact-name" name="name" type="text" autocomplete="name" minlength="2" maxlength="100" required />
+          <input id="contact-name" name="name" type="text" autocomplete="name" minlength="2" maxlength="100" required aria-describedby="contact-name-error" />
+          <p class="field__error" id="contact-name-error" data-field-error></p>
         </div>
         <div class="field">
           <label for="contact-email">Votre e-mail</label>
-          <input id="contact-email" name="email" type="email" autocomplete="email" maxlength="254" required />
+          <input id="contact-email" name="email" type="email" autocomplete="email" maxlength="254" required aria-describedby="contact-email-error" />
+          <p class="field__error" id="contact-email-error" data-field-error></p>
         </div>
         <div class="field field--full">
           <label for="contact-subject">Objet</label>
-          <input id="contact-subject" name="subject" type="text" maxlength="150" required />
+          <input id="contact-subject" name="subject" type="text" maxlength="150" required aria-describedby="contact-subject-error" />
+          <p class="field__error" id="contact-subject-error" data-field-error></p>
         </div>
         <div class="field field--full">
           <label for="contact-message">Message</label>
-          <textarea id="contact-message" name="message" rows="6" minlength="10" maxlength="3000" required></textarea>
+          <textarea id="contact-message" name="message" rows="6" minlength="10" maxlength="3000" required aria-describedby="contact-message-error"></textarea>
+          <p class="field__error" id="contact-message-error" data-field-error></p>
         </div>
         <p class="form-note field--full" id="form-note">
-          Le formulaire prépare l’e-mail dans votre messagerie : rien n’est envoyé ni enregistré par ce site.
+          Envoyé par le service Web3Forms. Vos coordonnées servent uniquement à vous répondre.
         </p>
         <div class="form-actions field--full">
-          <button class="button" type="submit" aria-describedby="form-note">Préparer l’e-mail <Icon name="arrow-right" /></button>
+          <button class="button" type="submit" aria-describedby="form-note"><span data-submit-label>Envoyer le message</span> <Icon name="arrow-right" /></button>
           <button class="link" type="button" data-draft-copy hidden>Copier le message</button>
         </div>
-        <p class="form-status field--full" data-form-status role="status" aria-live="polite"></p>
+        <p class="form-status field--full" data-form-status role="status" aria-live="polite"><Icon name="check" class="form-status__icon" /><span data-form-status-text></span></p>
       </form>
     </div>
   </div>
@@ -233,6 +247,7 @@ import { profile } from "../data/profile";
 
   .field {
     display: grid;
+    align-content: start;
     gap: 0.5rem;
   }
 
@@ -271,14 +286,32 @@ import { profile } from "../data/profile";
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
   }
 
-  .field input:user-invalid,
-  .field textarea:user-invalid {
-    border-color: #d23b3b;
+  /* Sans JavaScript, le navigateur valide seul ; avec, contact.ts affiche un
+     message sous chaque champ à corriger. */
+  :global(html:not(.js)) .field input:user-invalid,
+  :global(html:not(.js)) .field textarea:user-invalid,
+  .field [aria-invalid="true"] {
+    border-color: var(--danger);
+  }
+
+  .field__error {
+    font-size: var(--fs-small);
+    font-weight: 520;
+    color: var(--danger);
+  }
+
+  .field__error:empty {
+    display: none;
   }
 
   .form-note {
     font-size: var(--fs-small);
     color: var(--muted);
+  }
+
+  .contact-form[aria-busy="true"] .button {
+    cursor: progress;
+    opacity: 0.7;
   }
 
   .form-actions {
@@ -295,11 +328,32 @@ import { profile } from "../data/profile";
   }
 
   .form-status {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
     font-size: var(--fs-small);
     font-weight: 520;
   }
 
-  .form-status:empty {
+  /* Vide, la ligne d'état reste dans la page (les lecteurs d'écran annoncent
+     mieux une zone qui existe déjà), mais hors de la grille : aucun espace
+     ajouté sous le formulaire. */
+  .form-status:not([data-tone]) {
+    position: absolute;
+  }
+
+  .form-status[data-tone="error"] {
+    color: var(--danger);
+  }
+
+  /* Posée sur la ligne de base : la coche reste face à la première ligne. */
+  .form-status :global(.form-status__icon) {
+    color: var(--accent);
+    font-size: 1.15em;
+    translate: 0 0.15em;
+  }
+
+  .form-status:not([data-tone="success"]) :global(.form-status__icon) {
     display: none;
   }
 
